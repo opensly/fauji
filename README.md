@@ -1,19 +1,5 @@
-# watcher.js
-A simple & powerful javascript library to automate the unit test scritps generation and execution.
-
-### Scope of Project
-
-
-### Usage
-
-Configuration file should be designed with the following parameters:
-- **feature**
-- **group**
-- **scenario**
-- **test**
-- **when**
-- **then**
-
+# be-assertive
+A simple javascript assertion library for Node.js & browser.
 
 
 ### Features
