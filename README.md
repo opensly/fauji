@@ -1,6 +1,6 @@
 # be-assertive
 A simple javascript assertion library for Node.js & browser.
-
+(Note: Still under development state)
 
 ### Features
 
