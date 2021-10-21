@@ -1,0 +1,13 @@
+{
+  "name" : "be-assertive",
+  "version" : "0.0.1",
+  "bin": {
+    "be-assertive": "./bin/runner"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "file-system": "^2.2.2",
+    "lodash": "^4.17.15"
+  }
+}
