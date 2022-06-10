@@ -2,7 +2,10 @@
 A simple javascript assertion library for Node.js & browser.
 (Note: Still under development state)
 
-### Features
+## How to use?
+
+
+## Features
 
 #### Matchers
 A matcher is a method that lets you test values. The following matchers, compares the value of the result of expect() with the value passed in as argument, are:
