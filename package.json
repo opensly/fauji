@@ -1,13 +1,19 @@
 {
-  "name" : "be-assertive",
-  "version" : "0.0.1",
+  "name": "fauji",
+  "version": "0.0.1",
   "bin": {
-    "be-assertive": "./bin/runner"
+    "fauji": "./bin/runner"
   },
-  "main": "index.js",
+  "main": "dist/index.js",
+  "typings": "./src/matchers/index.d.ts",
   "dependencies": {
     "colors": "^1.4.0",
-    "file-system": "^2.2.2",
-    "lodash": "^4.17.15"
+    "file-system": "^2.2.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.5"
+  },
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --platform=node --outfile=dist/index.js --sourcemap --external:./src/run-assertions/setup-globals.js"
   }
 }

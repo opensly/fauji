@@ -1,4 +1,24 @@
 #!/usr/bin/env node
 
 process.title = 'watcher-run'
-require('../test-runner/runner')
+
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const options = {};
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--dir' || args[i] === '-d') {
+    options.dir = args[i + 1];
+    i++;
+  } else if (args[i] === '--pattern' || args[i] === '-p') {
+    options.pattern = args[i + 1];
+    i++;
+  } else if (args[i] === '--name' || args[i] === '-n') {
+    options.name = args[i + 1];
+    i++;
+  } else if (args[i] === '--watch' || args[i] === '-w') {
+    options.watch = true;
+  }
+}
+
+require('../src/run-assertions/runner')(options);
