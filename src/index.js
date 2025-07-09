@@ -5,4 +5,7 @@ module.exports = {
   logger: require('./run-assertions/logger'),
   setupGlobals: require('./run-assertions/setup-globals'),
   matchers: require('./matchers/matchers'),
+  spy: require('./matchers/spy').spy,
+  stub: require('./matchers/spy').stub,
+  mock: require('./matchers/spy').mock,
 };

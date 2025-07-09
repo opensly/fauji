@@ -22,6 +22,27 @@ export interface Matchers {
   toHaveProperty: MatcherFn;
   toThrow: MatcherFn;
   toBeInstanceOf: MatcherFn;
+  toBeArray: MatcherFn;
+  toBeObject: MatcherFn;
+  toBeString: MatcherFn;
+  toBeNumber: MatcherFn;
+  toBeBoolean: MatcherFn;
+  toBeFunction: MatcherFn;
+  toBeDate: MatcherFn;
+  toBeRegExp: MatcherFn;
+  toBeEmpty: MatcherFn;
+  toBeValidJSON: MatcherFn;
+  toBeValidURL: MatcherFn;
+  toBeValidEmail: MatcherFn;
+  toBeValidUUID: MatcherFn;
+  toBeWithinRange: MatcherFn;
+  toSatisfy: MatcherFn;
+  toMatchSchema: MatcherFn;
+  toHaveBeenCalled: MatcherFn;
+  toHaveBeenCalledWith: MatcherFn;
+  toHaveBeenCalledTimes: MatcherFn;
+  toResolve: MatcherFn;
+  toReject: MatcherFn;
   // Add custom matchers as index signature
   [key: string]: MatcherFn | any;
   not: Matchers;
@@ -39,4 +60,6 @@ export function allMatchers(received: any): Matchers;
  * Register custom matchers globally.
  * @param newMatchers An object with matcher functions
  */
-export function addMatchers(newMatchers: { [key: string]: MatcherFn }): void; 
+export function addMatchers(newMatchers: { [key: string]: MatcherFn }): void;
+
+export * from './spy'; 

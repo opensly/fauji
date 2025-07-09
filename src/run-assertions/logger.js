@@ -9,6 +9,7 @@ class Logger {
     this.suiteStack = [];
     this.startTime = null;
     this.endTime = null;
+    this.lastError = null;
   }
 
   startTimer() {
@@ -47,6 +48,11 @@ class Logger {
       this.testResults.push(this.currentTest);
       this.currentTest = null;
     }
+  }
+
+  error(message) {
+    this.lastError = message;
+    console.error(_colors.red(message));
   }
 
   getStats() {
