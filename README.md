@@ -1,7 +1,7 @@
 ![Fauji Mascot](assets/fauji_mascot_512x512.png)
 
 # fauji
-A simple JavaScript assertion library for Node.js & browser.
+A lightweight testing framework for JavaScript/TypeScript.
 (Note: Still under development)
 
 ## TypeScript Support

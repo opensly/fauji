@@ -6,6 +6,7 @@
   },
   "main": "dist/index.js",
   "typings": "./src/matchers/index.d.ts",
+  "description": "lightweight testing framework for JavaScript/TypeScript",
   "dependencies": {
     "colors": "^1.4.0",
     "file-system": "^2.2.2"
