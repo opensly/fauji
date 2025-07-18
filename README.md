@@ -1,3 +1,5 @@
+![Fauji Mascot](assets/fauji_mascot.png)
+
 # fauji
 A simple JavaScript assertion library for Node.js & browser.
 (Note: Still under development)
