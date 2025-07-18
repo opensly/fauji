@@ -1,24 +1,61 @@
 #!/usr/bin/env node
 
-process.title = 'watcher-run'
+const fs = require('fs');
+const path = require('path');
+
+process.title = 'fauji';
+
+// Helper to print usage
+function printHelp() {
+  console.log(`\nUsage: fauji [options]\n\nOptions:\n  -d, --dir <directory>      Directory to run tests in\n  -p, --pattern <pattern>    Pattern to match test files\n  -n, --name <name>          Name of the test to run\n  -w, --watch                Watch files for changes\n  -h, --help                 Show help\n  -v, --version              Show version\n`);
+}
+
+// Helper to print version
+function printVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    console.log(pkg.version);
+  } catch (e) {
+    console.log('Unknown version');
+  }
+}
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
 const options = {};
 
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--dir' || args[i] === '-d') {
+  const arg = args[i];
+  if (arg === '--dir' || arg === '-d') {
     options.dir = args[i + 1];
     i++;
-  } else if (args[i] === '--pattern' || args[i] === '-p') {
+  } else if (arg === '--pattern' || arg === '-p') {
     options.pattern = args[i + 1];
     i++;
-  } else if (args[i] === '--name' || args[i] === '-n') {
+  } else if (arg === '--name' || arg === '-n') {
     options.name = args[i + 1];
     i++;
-  } else if (args[i] === '--watch' || args[i] === '-w') {
+  } else if (arg === '--watch' || arg === '-w') {
     options.watch = true;
+  } else if (arg === '--help' || arg === '-h') {
+    printHelp();
+    process.exit(0);
+  } else if (arg === '--version' || arg === '-v') {
+    printVersion();
+    process.exit(0);
+  } else {
+    console.log(`Unknown option: ${arg}`);
+    printHelp();
+    process.exit(1);
   }
 }
 
-require('../src/run-assertions/runner')(options);
+// Try to require dist build, fallback to src for dev
+let mainRunner;
+try {
+  mainRunner = require('../dist/index.js').runner;
+} catch (e) {
+  mainRunner = require('../src/run-assertions/runner');
+}
+
+mainRunner(options);

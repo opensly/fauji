@@ -25,22 +25,37 @@ function findTestFiles({ dir, pattern, name }) {
 
 function runTestFiles(testFiles) {
   if (testFiles.length > 0) {
+    let completed = 0;
+    let failed = 0;
     testFiles.forEach(file => {
       const subprocess = childProcess.execFile('node', [require.resolve('./setup-globals.js'), file], (error, stdout, stderr) => {
         console.log(_colors.blue('\nTest result of ' + file));
-        if (error) {
-          console.log(_colors.red('Test failed: ' + error.message));
-        }
         if (stdout) {
           process.stdout.write(_colors.green(stdout));
         }
         if (stderr) {
           process.stderr.write(_colors.red(stderr));
         }
+        if (error) {
+          console.log(_colors.red('Test failed: ' + error.message));
+          failed++;
+        }
+        completed++;
+        if (completed === testFiles.length) {
+          // All tests done, print summary and exit
+          if (failed > 0) {
+            console.log(_colors.red(`\n${failed} test file(s) failed.`));
+            process.exit(1);
+          } else {
+            console.log(_colors.green('\nAll test files passed.'));
+            process.exit(0);
+          }
+        }
       });
     });
   } else {
     console.log(_colors.yellow('No test scripts found.'));
+    process.exit(0);
   }
 }
 

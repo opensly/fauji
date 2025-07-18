@@ -2,7 +2,7 @@
   "name": "fauji",
   "version": "0.0.1",
   "bin": {
-    "fauji": "./bin/runner"
+    "fauji": "./dist/bin/runner"
   },
   "main": "dist/index.js",
   "typings": "./src/matchers/index.d.ts",
