@@ -119,32 +119,22 @@ Fauji provides a Jest-like fake timers API for controlling time-based code in yo
 - `advanceTimersByTime(ms)`: Advance the fake clock by `ms` milliseconds, running any scheduled timers
 - `runAllTimers()`: Run all pending timers and intervals
 - `resetTimers()`: Reset the fake timer state (clears all scheduled timers/intervals)
+- `getTimerCalls(fnName)`: Get all calls to a timer function (e.g., 'setTimeout')
+- `getTimerCallCount(fnName)`: Get the number of calls to a timer function
+
+**Timer mocks/spies are automatically reset/restored when you use `useRealTimers()` or `resetTimers()`.**
 
 **Example:**
 ```js
-describe('timer tests', () => {
-  beforeEach(() => {
-    useFakeTimers();
-  });
-  afterEach(() => {
-    useRealTimers();
-  });
+describe('timer call assertions', () => {
+  beforeEach(() => useFakeTimers());
+  afterEach(() => useRealTimers());
 
-  test('setTimeout works', () => {
-    let called = false;
-    setTimeout(() => { called = true; }, 1000);
-    advanceTimersByTime(999);
-    expect(called).toBe(false);
-    advanceTimersByTime(1);
-    expect(called).toBe(true);
-  });
-
-  test('setInterval works', () => {
-    let count = 0;
-    const id = setInterval(() => { count++; }, 500);
-    advanceTimersByTime(1500);
-    expect(count).toBe(3);
-    clearInterval(id);
+  test('setTimeout call count', () => {
+    setTimeout(() => {}, 100);
+    setTimeout(() => {}, 200);
+    expect(getTimerCallCount('setTimeout')).toBe(2);
+    expect(getTimerCalls('setTimeout')[0][1]).toBe(100);
   });
 });
 ```

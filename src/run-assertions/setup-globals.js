@@ -27,6 +27,8 @@ global.unmock = spy.unmock;
 global.resetAllMocks = spy.resetAllMocks;
 global.requireActual = spy.requireActual;
 global.requireMock = spy.requireMock;
+global.getTimerCalls = fakeTimers.getTimerCalls;
+global.getTimerCallCount = fakeTimers.getTimerCallCount;
 
 // --- Fauji CLI auto-run support ---
 if (require.main === module && process.argv[2]) {

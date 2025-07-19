@@ -1,11 +1,15 @@
 // Fauji Fake Timers Implementation
 // Provides a Jest-like fake timers API for tests
 
+const spy = require('../matchers/spy');
+
 let _now = 0;
 let _timers = [];
 let _intervals = [];
 let _originals = {};
 let _isUsingFakeTimers = false;
+
+let _timerSpies = {};
 
 function _mockDate(...args) {
   if (args.length === 0) return new _originals.Date(_now);
@@ -59,13 +63,42 @@ function _uninstallFakeTimers() {
   _isUsingFakeTimers = false;
 }
 
+function _spyOnTimers() {
+  _timerSpies.setTimeout = spy.spyOn(global, 'setTimeout');
+  _timerSpies.setInterval = spy.spyOn(global, 'setInterval');
+  _timerSpies.clearTimeout = spy.spyOn(global, 'clearTimeout');
+  _timerSpies.clearInterval = spy.spyOn(global, 'clearInterval');
+}
+
+function _restoreTimerSpies() {
+  Object.values(_timerSpies).forEach(s => s && s.restore && s.restore());
+  _timerSpies = {};
+}
+
+function getTimerCalls(fnName) {
+  if (_timerSpies[fnName] && _timerSpies[fnName].mock) {
+    return _timerSpies[fnName].mock.calls;
+  }
+  return [];
+}
+
+function getTimerCallCount(fnName) {
+  return getTimerCalls(fnName).length;
+}
+
+// Patch useFakeTimers/useRealTimers/resetTimers to integrate spies
+const _origUseFakeTimers = useFakeTimers;
+const _origUseRealTimers = useRealTimers;
+const _origResetTimers = resetTimers;
+
 function useFakeTimers() {
-  _installFakeTimers();
+  _origUseFakeTimers();
+  _spyOnTimers();
 }
 
 function useRealTimers() {
-  _uninstallFakeTimers();
-  resetTimers();
+  _origUseRealTimers();
+  _restoreTimerSpies();
 }
 
 function advanceTimersByTime(ms) {
@@ -112,9 +145,8 @@ function runAllTimers() {
 }
 
 function resetTimers() {
-  _now = 0;
-  _timers = [];
-  _intervals = [];
+  _origResetTimers();
+  _restoreTimerSpies();
 }
 
 module.exports = {
@@ -123,4 +155,6 @@ module.exports = {
   advanceTimersByTime,
   runAllTimers,
   resetTimers,
+  getTimerCalls,
+  getTimerCallCount,
 }; 
