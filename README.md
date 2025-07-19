@@ -148,3 +148,74 @@ describe('timer tests', () => {
   });
 });
 ```
+
+### Mocking
+Fauji now provides enhanced Jest-like mocking APIs for modules and functions.
+
+**API:**
+- `fn(impl?)`: Create a mock function (tracks calls/instances)
+- `spyOn(obj, methodName)`: Spy on an object's method
+- `mock(modulePath, mockImpl?)`: Mock a module. If no mockImpl is provided, auto-mocks all exports as mock functions
+- `unmock(modulePath)`: Restore the original module
+- `resetAllMocks()`: Restore all mocked modules to their original state (called automatically after each test)
+- `requireActual(modulePath)`: Get the real, unmocked module
+- `requireMock(modulePath)`: Get the current mock for a module
+
+**Manual Mocks:**
+If a `__mocks__/module.js` file exists next to your module, it will be used automatically when you call `mock('module')` with no second argument.
+
+**Named Export Mocking:**
+You can mock specific named exports by passing an object as the second argument to `mock()`:
+```js
+mock('./math', { add: fn(() => 99) });
+const math = require('./math');
+expect(math.add()).toBe(99);
+```
+
+**Manual Mock Example:**
+```
+project/
+  math.js
+  __mocks__/
+    math.js  // <-- this file will be used as the mock
+```
+```js
+mock('./math');
+const math = require('./math');
+// math is now the manual mock
+```
+
+**requireActual/requireMock Example:**
+```js
+mock('./math');
+const mathMock = requireMock('./math');
+const mathReal = requireActual('./math');
+```
+
+**Examples:**
+```js
+const math = require('./math');
+
+describe('mocking', () => {
+  test('auto-mock all exports', () => {
+    mock('./math');
+    math.add(1, 2);
+    expect(math.add.mock.calls.length).toBe(1);
+    unmock('./math');
+  });
+
+  test('manual mock', () => {
+    mock('./math', { add: fn(() => 42) });
+    expect(math.add(1, 2)).toBe(42);
+    unmock('./math');
+  });
+
+  test('spyOn', () => {
+    const obj = { foo: (x) => x + 1 };
+    const spy = spyOn(obj, 'foo');
+    obj.foo(5);
+    expect(spy.mock.calls[0][0]).toBe(5);
+    spy.restore();
+  });
+});
+```
