@@ -4,7 +4,7 @@ module.exports = {
   watcher: require('./run-assertions/watcher'),
   logger: require('./run-assertions/logger'),
   setupGlobals: require('./run-assertions/setup-globals'),
-  matchers: require('./matchers/matchers'),
+  matchers: require('./matchers/index.js'),
   spy: require('./matchers/spy').spy,
   stub: require('./matchers/spy').stub,
   mock: require('./matchers/spy').mock,

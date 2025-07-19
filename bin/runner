@@ -7,7 +7,7 @@ process.title = 'fauji';
 
 // Helper to print usage
 function printHelp() {
-  console.log(`\nUsage: fauji [options]\n\nOptions:\n  -d, --dir <directory>      Directory to run tests in\n  -p, --pattern <pattern>    Pattern to match test files\n  -n, --name <name>          Name of the test to run\n  -w, --watch                Watch files for changes\n  -h, --help                 Show help\n  -v, --version              Show version\n`);
+  console.log(`\nUsage: fauji [options]\n\nOptions:\n  -d, --dir <directory>      Directory to run tests in\n  -p, --pattern <pattern>    Pattern to match test files\n  -n, --name <name>          Name of the test to run\n  -w, --watch                Watch files for changes\n  --coverage                 Collect code coverage\n  --parallel <num>           Run test files in parallel (default: # of CPUs)\n  --env <env>                Test environment (node|jsdom)\n  --config <file>            Path to config file\n  -h, --help                 Show help\n  -v, --version              Show version\n`);
 }
 
 // Helper to print version
@@ -23,6 +23,7 @@ function printVersion() {
 // Parse CLI arguments
 const args = process.argv.slice(2);
 const options = {};
+let configFile;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -37,6 +38,17 @@ for (let i = 0; i < args.length; i++) {
     i++;
   } else if (arg === '--watch' || arg === '-w') {
     options.watch = true;
+  } else if (arg === '--coverage') {
+    options.coverage = true;
+  } else if (arg === '--parallel') {
+    options.parallel = parseInt(args[i + 1], 10) || true;
+    i++;
+  } else if (arg === '--env') {
+    options.env = args[i + 1];
+    i++;
+  } else if (arg === '--config') {
+    configFile = args[i + 1];
+    i++;
   } else if (arg === '--help' || arg === '-h') {
     printHelp();
     process.exit(0);
@@ -50,6 +62,25 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
+// Load config file if present
+const cwd = process.cwd();
+let config = {};
+if (!configFile) {
+  if (fs.existsSync(path.join(cwd, 'fauji.config.js'))) configFile = path.join(cwd, 'fauji.config.js');
+  else if (fs.existsSync(path.join(cwd, 'fauji.config.json'))) configFile = path.join(cwd, 'fauji.config.json');
+}
+if (configFile) {
+  try {
+    config = require(configFile);
+    if (config.default) config = config.default; // handle ES module
+  } catch (e) {
+    console.error('Failed to load config file:', configFile, e);
+    process.exit(1);
+  }
+}
+// Merge CLI options (CLI takes precedence)
+const finalOptions = { ...config, ...options };
+
 // Try to require dist build, fallback to src for dev
 let mainRunner;
 try {
@@ -58,4 +89,4 @@ try {
   mainRunner = require('../src/run-assertions/runner');
 }
 
-mainRunner(options);
+mainRunner(finalOptions);
