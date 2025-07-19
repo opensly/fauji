@@ -109,3 +109,42 @@ Before running your tests you will want to perform some initialization.
 Just as you can do with setup, you can also perform something after each test runs
 - afterEach(), to perform something after each test runs
 - afterAll(), to perform something after all the tests runs
+
+### Fake Timers
+Fauji provides a Jest-like fake timers API for controlling time-based code in your tests. This is useful for testing code that uses setTimeout, setInterval, or Date.
+
+**API:**
+- `useFakeTimers()`: Switch to fake timers (mock setTimeout, setInterval, Date, etc.)
+- `useRealTimers()`: Restore real timers and Date
+- `advanceTimersByTime(ms)`: Advance the fake clock by `ms` milliseconds, running any scheduled timers
+- `runAllTimers()`: Run all pending timers and intervals
+- `resetTimers()`: Reset the fake timer state (clears all scheduled timers/intervals)
+
+**Example:**
+```js
+describe('timer tests', () => {
+  beforeEach(() => {
+    useFakeTimers();
+  });
+  afterEach(() => {
+    useRealTimers();
+  });
+
+  test('setTimeout works', () => {
+    let called = false;
+    setTimeout(() => { called = true; }, 1000);
+    advanceTimersByTime(999);
+    expect(called).toBe(false);
+    advanceTimersByTime(1);
+    expect(called).toBe(true);
+  });
+
+  test('setInterval works', () => {
+    let count = 0;
+    const id = setInterval(() => { count++; }, 500);
+    advanceTimersByTime(1500);
+    expect(count).toBe(3);
+    clearInterval(id);
+  });
+});
+```
