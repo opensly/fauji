@@ -1,14 +1,48 @@
 // Test and suite registration for Fauji
 const { Suite, getCurrentSuite, setCurrentSuite } = require('./suite');
 
-function describe(desc, fn) {
-  return _describe(desc, fn, 'normal');
+/**
+ * Register a fixture for the current suite.
+ * The fixture function can be async and may return a value or { value, teardown }.
+ * Teardown will be called after the test if provided.
+ */
+function fixture(name, fn) {
+  getCurrentSuite().fixtures[name] = fn;
 }
-describe.only = (desc, fn) => _describe(desc, fn, 'only');
-describe.skip = (desc, fn) => _describe(desc, fn, 'skip');
 
-function _describe(desc, fn, mode) {
-  const suite = new Suite(desc, mode);
+function describe(desc, optionsOrFn, maybeFn) {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _describe(desc, fn, 'normal', options.annotations);
+}
+describe.only = (desc, optionsOrFn, maybeFn) => {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _describe(desc, fn, 'only', options.annotations);
+};
+describe.skip = (desc, optionsOrFn, maybeFn) => {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _describe(desc, fn, 'skip', options.annotations);
+};
+
+function _describe(desc, fn, mode, annotations) {
+  const suite = new Suite(desc, mode, annotations || {});
   suite.parent = getCurrentSuite();
   getCurrentSuite().suites.push(suite);
   setCurrentSuite(suite);
@@ -16,17 +50,49 @@ function _describe(desc, fn, mode) {
   setCurrentSuite(suite.parent);
 }
 
-function test(desc, fn) {
-  return _test(desc, fn, 'normal');
+function test(desc, optionsOrFn, maybeFn) {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _test(desc, fn, 'normal', options);
 }
-test.only = (desc, fn) => _test(desc, fn, 'only');
-test.skip = (desc, fn) => _test(desc, fn, 'skip');
+test.only = (desc, optionsOrFn, maybeFn) => {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _test(desc, fn, 'only', options);
+};
+test.skip = (desc, optionsOrFn, maybeFn) => {
+  let options = {}, fn;
+  if (typeof optionsOrFn === 'function') {
+    fn = optionsOrFn;
+  } else {
+    options = optionsOrFn || {};
+    fn = maybeFn;
+  }
+  return _test(desc, fn, 'skip', options);
+};
 
-function _test(desc, fn, mode) {
-  getCurrentSuite().tests.push({ desc, fn, mode });
+function _test(desc, fn, mode, options) {
+  getCurrentSuite().tests.push({
+    desc,
+    fn,
+    mode,
+    fixtures: options.fixtures || [],
+    annotations: options.annotations || {},
+  });
 }
 
 module.exports = {
   describe,
   test,
+  fixture,
 }; 

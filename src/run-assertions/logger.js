@@ -25,14 +25,19 @@ class Logger {
     this.endTime = Date.now();
   }
 
-  perceive(context, msg) {
+  perceive(context, msg, annotations) {
     if (context === 'describe') {
       this.suiteStack.push(msg);
-      console.log(_colors.bold('\n' + msg));
+      let ann = annotations && Object.keys(annotations).length ? ' ' + _colors.cyan(JSON.stringify(annotations)) : '';
+      console.log(_colors.bold('\n' + msg) + ann);
     } else if (context === 'test') {
       this.currentTest = { name: msg, suite: [...this.suiteStack], status: null, error: null, duration: 0, skipped: false };
+      if (annotations && Object.keys(annotations).length) {
+        this.currentTest.annotations = annotations;
+      }
       this.currentTest.start = Date.now();
-      process.stdout.write('  ' + msg);
+      let ann = annotations && Object.keys(annotations).length ? ' ' + _colors.cyan(JSON.stringify(annotations)) : '';
+      process.stdout.write('  ' + msg + ann);
     }
   }
 
@@ -133,7 +138,8 @@ class Logger {
         suite: r.suite,
         status: r.status,
         error: r.error ? (r.error.stack || r.error.toString()) : null,
-        duration: r.duration
+        duration: r.duration,
+        annotations: r.annotations || {},
       }))
     };
   }
@@ -157,7 +163,8 @@ class Logger {
       let statusClass = test.status;
       let slow = test.duration > this.slowThreshold;
       let slowMsg = slow ? ' <span style="color:orange;">(SLOW)</span>' : '';
-      html.push(`<div class="test ${statusClass}" style="margin-left:${test.suite.length}em;">${test.status === 'passed' ? '✓' : test.status === 'skipped' ? '-' : '✗'} ${test.name} <span class="duration">(${test.duration}ms${slowMsg})</span></div>`);
+      let ann = test.annotations && Object.keys(test.annotations).length ? `<span style='color:teal;'> ${JSON.stringify(test.annotations)}</span>` : '';
+      html.push(`<div class="test ${statusClass}" style="margin-left:${test.suite.length}em;">${test.status === 'passed' ? '✓' : test.status === 'skipped' ? '-' : '✗'} ${test.name}${ann} <span class="duration">(${test.duration}ms${slowMsg})</span></div>`);
       if (test.status === 'failed' && test.error) {
         html.push(`<pre>${(test.error.stack || test.error).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`);
       }

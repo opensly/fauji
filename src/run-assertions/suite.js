@@ -1,12 +1,15 @@
 // Suite management for Fauji
 class Suite {
-  constructor(desc, mode = 'normal') {
+  constructor(desc, mode = 'normal', annotations = {}) {
     this.desc = desc;
     this.tests = [];
     this.suites = [];
     this.hooks = { beforeAll: [], beforeEach: [], afterEach: [], afterAll: [] };
     this.parent = null;
     this.mode = mode; // 'normal', 'only', 'skip'
+    this.fixtures = {};
+    this.teardowns = {};
+    this.annotations = annotations;
   }
 }
 

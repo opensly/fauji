@@ -33,35 +33,76 @@ function hasOnly(suite) {
   return suite.suites.some(hasOnly);
 }
 
+async function resolveFixtures(test, suite) {
+  // Walk up the suite chain to collect all fixtures
+  const fixtures = {};
+  let current = suite;
+  while (current) {
+    Object.assign(fixtures, current.fixtures);
+    current = current.parent;
+  }
+  // Resolve requested fixtures
+  const resolved = [];
+  const teardowns = [];
+  for (const name of test.fixtures || []) {
+    if (!fixtures[name]) throw new Error(`Fixture not found: ${name}`);
+    const result = await fixtures[name]();
+    if (result && typeof result === 'object' && 'value' in result) {
+      resolved.push(result.value);
+      if (typeof result.teardown === 'function') teardowns.push(result.teardown);
+    } else {
+      resolved.push(result);
+    }
+  }
+  return { resolved, teardowns };
+}
+
 /**
  * Recursively runs a test suite, including hooks and child suites.
  * Handles skipped tests and logs results using Logger.
  * @param {Suite} suite
  */
-function runSuite(suite) {
+async function runSuite(suite) {
   if (suite.mode === 'skip') return;
-  _log.perceive('describe', suite.desc);
-  suite.hooks.beforeAll.forEach(fn => fn());
+  _log.perceive('describe', suite.desc, suite.annotations);
+  for (const fn of suite.hooks.beforeAll) await fn();
   for (const test of suite.tests) {
     if (test.mode === 'skip') {
-      _log.perceive('test', test.desc + ' (skipped)');
+      _log.perceive('test', test.desc + ' (skipped)', test.annotations);
       _log.status(true, null, true); // Mark as skipped
       continue;
     }
-    suite.hooks.beforeEach.forEach(fn => fn());
+    for (const fn of suite.hooks.beforeEach) await fn();
+    let teardowns = [];
     try {
-      _log.perceive('test', test.desc);
-      test.fn();
+      _log.perceive('test', test.desc, test.annotations);
+      const { resolved, teardowns: tds } = await resolveFixtures(test, suite);
+      teardowns = tds;
+      const maybePromise = test.fn(...resolved);
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        await maybePromise;
+      }
       _log.status(true);
     } catch (e) {
       _log.status(false, e);
     }
-    suite.hooks.afterEach.forEach(fn => fn());
+    // Run teardowns after test
+    for (const td of teardowns) {
+      try {
+        const maybePromise = td();
+        if (maybePromise && typeof maybePromise.then === 'function') {
+          await maybePromise;
+        }
+      } catch (e) {
+        // Ignore teardown errors for now
+      }
+    }
+    for (const fn of suite.hooks.afterEach) await fn();
   }
   for (const child of suite.suites) {
-    runSuite(child);
+    await runSuite(child);
   }
-  suite.hooks.afterAll.forEach(fn => fn());
+  for (const fn of suite.hooks.afterAll) await fn();
   _log.suiteStack.pop();
 }
 
@@ -74,24 +115,26 @@ function run() {
   if (hasOnly(rootSuite)) {
     filterOnlySuites(rootSuite);
   }
-  for (const suite of rootSuite.suites) {
-    runSuite(suite);
-  }
-  _log.printSummary();
-  if (process.env.FAUJI_REPORT || global.FAUJI_REPORT) {
-    const type = process.env.FAUJI_REPORT || global.FAUJI_REPORT;
-    const fs = require('fs');
-    if (type === 'html') {
-      fs.writeFileSync('fauji-report.html', _log.getResultsHTML(), 'utf8');
-      console.log('HTML report written to fauji-report.html');
-    } else if (type === 'json') {
-      fs.writeFileSync('fauji-report.json', JSON.stringify(_log.getResultsJSON(), null, 2), 'utf8');
-      console.log('JSON report written to fauji-report.json');
+  (async () => {
+    for (const suite of rootSuite.suites) {
+      await runSuite(suite);
     }
-  }
-  if (_log.failed > 0) {
-    process.exitCode = 1;
-  }
+    _log.printSummary();
+    if (process.env.FAUJI_REPORT || global.FAUJI_REPORT) {
+      const type = process.env.FAUJI_REPORT || global.FAUJI_REPORT;
+      const fs = require('fs');
+      if (type === 'html') {
+        fs.writeFileSync('fauji-report.html', _log.getResultsHTML(), 'utf8');
+        console.log('HTML report written to fauji-report.html');
+      } else if (type === 'json') {
+        fs.writeFileSync('fauji-report.json', JSON.stringify(_log.getResultsJSON(), null, 2), 'utf8');
+        console.log('JSON report written to fauji-report.json');
+      }
+    }
+    if (_log.failed > 0) {
+      process.exitCode = 1;
+    }
+  })();
 }
 
 /**
