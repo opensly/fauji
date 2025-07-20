@@ -1,15 +1,8 @@
-// Spy/Stub/Mock System for Fauji
-// --------------------------------
 // Provides spy, stub, and mock utilities for use in tests and matchers.
+import { builtinModules } from 'module';
 
-/**
- * @typedef {Function & { calls: any[][], callCount: number, isSpy: boolean, restore: () => void }} SpyFn
- */
-/**
- * @param {Function=} fn
- * @returns {SpyFn}
- */
-function createSpy(fn) {
+// --- Spy Implementation ---
+export function createSpy(fn) {
   const spy = function(...args) {
     spy.calls.push(args);
     spy.callCount++;
@@ -21,15 +14,11 @@ function createSpy(fn) {
   spy.restore = () => {};
   return spy;
 }
-function isSpy(fn) { return fn && fn.isSpy; }
+export const spy = createSpy;
+export function isSpy(fn) { return fn && fn.isSpy; }
 
-/**
- * @param {any} obj
- * @param {string} methodName
- * @param {Function=} impl
- * @returns {SpyFn}
- */
-function createStub(obj, methodName, impl) {
+// --- Stub Implementation ---
+export function createStub(obj, methodName, impl) {
   if (!obj || typeof obj[methodName] !== 'function') throw new Error('No such method to stub');
   const original = obj[methodName];
   const spy = createSpy(impl);
@@ -37,13 +26,10 @@ function createStub(obj, methodName, impl) {
   spy.restore = () => { obj[methodName] = original; };
   return spy;
 }
+export const stub = createStub;
 
-/**
- * @param {string} modulePath
- * @param {any} mockImpl
- * @returns {{ restore: () => void }}
- */
-function createMock(modulePath, mockImpl) {
+// --- Mock Implementation ---
+export function createMock(modulePath, mockImpl) {
   const resolved = require.resolve(modulePath);
   const original = require.cache[resolved];
   require.cache[resolved] = { ...original, exports: mockImpl };
@@ -56,7 +42,7 @@ function createMock(modulePath, mockImpl) {
 const _mockedModules = new Map();
 const _originalModules = new Map();
 
-function fn(impl) {
+export function fn(impl) {
   const mockFn = function(...args) {
     mockFn.mock.calls.push(args);
     mockFn.mock.instances.push(this);
@@ -76,7 +62,7 @@ function fn(impl) {
   return mockFn;
 }
 
-function spyOn(obj, methodName) {
+export function spyOn(obj, methodName) {
   if (!obj || typeof obj[methodName] !== 'function') throw new Error('No such method to spyOn');
   const original = obj[methodName];
   const spy = fn(original);
@@ -97,32 +83,15 @@ function autoMockExports(exports) {
   return mocked;
 }
 
-const path = require('path');
-const fs = require('fs');
-
-function findManualMock(modulePath) {
-  // Look for __mocks__ sibling to the module
-  const dir = path.dirname(modulePath);
-  const base = path.basename(modulePath, path.extname(modulePath));
-  const mockPath = path.join(dir, '__mocks__', base + '.js');
-  if (fs.existsSync(mockPath)) {
-    return mockPath;
-  }
-  return null;
-}
-
-// --- Phase 3: Built-in module mocking and advanced call tracking ---
-const builtins = require('module').builtinModules || [];
-
+const builtins = builtinModules || [];
 function isBuiltinModule(modulePath) {
   // Accept both 'fs' and 'node:fs' forms
   return builtins.includes(modulePath) || builtins.includes(modulePath.replace(/^node:/, ''));
 }
 
-function mock(modulePath, mockImpl) {
+export function mock(modulePath, mockImpl) {
   let resolved;
   if (isBuiltinModule(modulePath)) {
-    // For built-ins, use the module name as the key
     resolved = modulePath;
     if (!_originalModules.has(resolved)) {
       _originalModules.set(resolved, require(modulePath));
@@ -138,17 +107,14 @@ function mock(modulePath, mockImpl) {
   }
   let mockExports;
   if (mockImpl === undefined) {
-    // Check for manual mock
     const manualMockPath = findManualMock(resolved);
     if (manualMockPath) {
       mockExports = require(manualMockPath);
     } else {
-      // Auto-mock all exports
       const realExports = require(resolved);
       mockExports = autoMockExports(realExports);
     }
   } else if (typeof mockImpl === 'object' && !Array.isArray(mockImpl)) {
-    // Allow mocking specific named exports
     const realExports = require(resolved);
     mockExports = { ...realExports, ...mockImpl };
     for (const key of Object.keys(mockImpl)) {
@@ -166,7 +132,7 @@ function mock(modulePath, mockImpl) {
   };
 }
 
-function unmock(modulePath) {
+export function unmock(modulePath) {
   const resolved = require.resolve(modulePath);
   if (_originalModules.has(resolved)) {
     require.cache[resolved] = _originalModules.get(resolved);
@@ -175,7 +141,7 @@ function unmock(modulePath) {
   }
 }
 
-function resetAllMocks() {
+export function resetAllMocks() {
   for (const resolved of _mockedModules.keys()) {
     if (_originalModules.has(resolved)) {
       require.cache[resolved] = _originalModules.get(resolved);
@@ -185,7 +151,7 @@ function resetAllMocks() {
   _originalModules.clear();
 }
 
-function requireActual(modulePath) {
+export function requireActual(modulePath) {
   const resolved = require.resolve(modulePath);
   if (_originalModules.has(resolved)) {
     return _originalModules.get(resolved).exports;
@@ -193,26 +159,10 @@ function requireActual(modulePath) {
   return require(resolved);
 }
 
-function requireMock(modulePath) {
+export function requireMock(modulePath) {
   const resolved = require.resolve(modulePath);
   if (_mockedModules.has(resolved)) {
     return _mockedModules.get(resolved);
   }
   return require(resolved);
-}
-
-module.exports = {
-  createSpy,
-  isSpy,
-  createStub,
-  createMock,
-  spy: createSpy,
-  stub: createStub,
-  mock: mock,
-  fn,
-  spyOn,
-  unmock,
-  resetAllMocks,
-  requireActual,
-  requireMock
-}; 
+} 

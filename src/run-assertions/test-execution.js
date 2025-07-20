@@ -1,11 +1,11 @@
 // Test execution for Fauji with worker pool
-const _colors = require('colors/safe');
-const os = require('os');
-const { Worker } = require('worker_threads');
+import colors from 'colors/safe';
+import os from 'os';
+import { Worker } from 'worker_threads';
 
-async function runTestFiles(testFiles, options = {}) {
+export async function runTestFiles(testFiles, options = {}) {
   if (!testFiles.length) {
-    console.log(_colors.yellow('No test scripts found.'));
+    console.log(colors.yellow('No test scripts found.'));
     process.exit(0);
   }
   const maxWorkers = typeof options.parallel === 'number' ? options.parallel : os.cpus().length;
@@ -22,16 +22,16 @@ async function runTestFiles(testFiles, options = {}) {
       running++;
       const env = { ...process.env };
       if (options.report) env.FAUJI_REPORT = options.report;
-      const worker = new Worker(require.resolve('./worker-thread.js'), {
+      const worker = new Worker(new URL('./worker-thread.js', import.meta.url), {
         workerData: { testFile: file, env }
       });
       worker.on('message', (msg) => {
         if (msg.type === 'result') {
-          console.log(_colors.blue('\nTest result of ' + file));
-          if (msg.stdout) process.stdout.write(_colors.green(msg.stdout));
-          if (msg.stderr) process.stderr.write(_colors.red(msg.stderr));
+          console.log(colors.blue('\nTest result of ' + file));
+          if (msg.stdout) process.stdout.write(colors.green(msg.stdout));
+          if (msg.stderr) process.stderr.write(colors.red(msg.stderr));
           if (msg.error) {
-            console.log(_colors.red('Test failed: ' + msg.error));
+            console.log(colors.red('Test failed: ' + msg.error));
             failed++;
           }
           completed++;
@@ -39,14 +39,14 @@ async function runTestFiles(testFiles, options = {}) {
           results.push({ file, error: msg.error });
           if (completed === testFiles.length) {
             if (options.report) {
-              if (options.report === 'html') console.log(_colors.cyan('HTML report written to fauji-report.html'));
-              if (options.report === 'json') console.log(_colors.cyan('HTML report written to fauji-report.json'));
+              if (options.report === 'html') console.log(colors.cyan('HTML report written to fauji-report.html'));
+              if (options.report === 'json') console.log(colors.cyan('HTML report written to fauji-report.json'));
             }
             if (failed > 0) {
-              console.log(_colors.red(`\n${failed} test file(s) failed.`));
+              console.log(colors.red(`\n${failed} test file(s) failed.`));
               process.exit(1);
             } else {
-              console.log(_colors.green('\nAll test files passed.'));
+              console.log(colors.green('\nAll test files passed.'));
               process.exit(0);
             }
             resolve(results);
@@ -56,7 +56,7 @@ async function runTestFiles(testFiles, options = {}) {
         }
       });
       worker.on('error', (err) => {
-        console.log(_colors.red('Worker thread error: ' + err.message));
+        console.log(colors.red('Worker thread error: ' + err.message));
         failed++;
         completed++;
         running--;
@@ -69,7 +69,7 @@ async function runTestFiles(testFiles, options = {}) {
       });
       worker.on('exit', (code) => {
         if (code !== 0) {
-          console.log(_colors.red(`Worker stopped with exit code ${code}`));
+          console.log(colors.red(`Worker stopped with exit code ${code}`));
         }
       });
     }
@@ -77,8 +77,4 @@ async function runTestFiles(testFiles, options = {}) {
       runNext();
     }
   });
-}
-
-module.exports = {
-  runTestFiles,
-}; 
+} 

@@ -1,14 +1,10 @@
-// Object matchers for Fauji
-const { getMatcherResult, isMatch, hasByPath, getByPath, deepEqual } = require('./utils');
+import { getMatcherResult, isMatch, hasByPath, getByPath, deepEqual } from './utils.js';
 
-module.exports = {
-  toMatchObject: (received, expected) => getMatcherResult(isMatch(received, expected), 'toMatchObject', received, expected),
-  toHaveProperty: (received, keyPath, value) => {
-    let hasProp = hasByPath(received, keyPath);
-    let result = hasProp;
-    if (hasProp && arguments.length === 3) {
-      result = deepEqual(getByPath(received, keyPath), value);
-    }
-    return getMatcherResult(result, 'toHaveProperty', received, keyPath);
-  },
-}; 
+export function toMatchObject(received, expected) {
+  return getMatcherResult(isMatch(received, expected), 'toMatchObject', received, expected);
+}
+export function toHaveProperty(received, key, value) {
+  const has = hasByPath(received, key);
+  const val = getByPath(received, key);
+  return getMatcherResult(has && (arguments.length < 3 || deepEqual(val, value)), 'toHaveProperty', received, key);
+} 

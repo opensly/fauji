@@ -14,9 +14,9 @@
     "fauji": "./dist/bin/runner"
   },
   "scripts": {
-    "build:cjs": "esbuild src/index.js --bundle --platform=node --format=cjs --outfile=dist/index.cjs --sourcemap --external:./src/run-assertions/worker-thread.js",
-    "build:esm": "esbuild src/index.js --bundle --platform=node --format=esm --outfile=dist/index.mjs --sourcemap --external:./src/run-assertions/worker-thread.js",
-    "build:types": "cp src/matchers/index.d.ts dist/index.d.ts",
+    "build:cjs": "esbuild src/index.js --bundle --platform=node --format=cjs --outfile=dist/index.cjs --sourcemap --external:./src/run-assertions/worker-thread.js --external:jsdom",
+    "build:esm": "esbuild src/index.js --bundle --platform=node --format=esm --outfile=dist/index.mjs --sourcemap --external:./src/run-assertions/worker-thread.js --external:jsdom",
+    "build:types": "tsc --emitDeclarationOnly --declaration --project tsconfig.json",
     "build": "npm run build:cjs && npm run build:esm && npm run build:types && npm run postbuild",
     "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner",
     "lint": "eslint . --ext .js,.ts",
@@ -46,6 +46,7 @@
     "is-empty-dir": "^1.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.5"
+    "esbuild": "^0.25.5",
+    "typescript": "^5.8.3"
   }
 }

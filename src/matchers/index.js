@@ -1,27 +1,25 @@
-// Matcher registry for modularized matchers
-const equality = require('./equality');
-const type = require('./type');
-const string = require('./string');
-const object = require('./object');
-const number = require('./number');
-const spyMatchers = require('./spyMatchers');
-const asyncMatchers = require('./async');
-const schema = require('./schema');
-const empty = require('./empty');
-const validation = require('./validation');
-const satisfy = require('./satisfy');
-const throwMatcher = require('./throw');
-const length = require('./length');
-const utils = require('./utils');
+import * as equality from './equality.js';
+import * as type from './type.js';
+import * as string from './string.js';
+import * as object from './object.js';
+import * as number from './number.js';
+import * as spyMatchers from './spyMatchers.js';
+import * as asyncMatchers from './async.js';
+import * as schema from './schema.js';
+import * as empty from './empty.js';
+import * as validation from './validation.js';
+import * as satisfy from './satisfy.js';
+import * as throwMatcher from './throw.js';
+import * as length from './length.js';
+import * as utils from './utils.js';
 
-// Global matcher registry for extensibility
 const customMatchers = {};
 
-function addMatchers(matchers) {
+export function addMatchers(matchers) {
   Object.assign(customMatchers, matchers);
 }
 
-function allMatchers(received) {
+export function allMatchers(received) {
   const builtIn = {
     ...equality,
     ...type,
@@ -43,7 +41,6 @@ function allMatchers(received) {
   for (const key of Object.keys(matchers)) {
     proxy[key] = (...args) => matchers[key](received, ...args);
   }
-  // Support .not
   proxy.not = {};
   for (const key of Object.keys(matchers)) {
     proxy.not[key] = (...args) => !matchers[key](received, ...args);
@@ -51,7 +48,7 @@ function allMatchers(received) {
   return proxy;
 }
 
-module.exports = {
+export default {
   ...equality,
   ...type,
   ...string,

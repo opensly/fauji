@@ -1,6 +1,5 @@
-// Schema validation matcher for Fauji
-const { getMatcherResult, matchSchema } = require('./utils');
+import { getMatcherResult, matchSchema } from './utils.js';
 
-module.exports = {
-  toMatchSchema: (received, schema) => getMatcherResult(matchSchema(received, schema), 'toMatchSchema', received, schema),
-}; 
+export function toMatchSchema(received, schema) {
+  return getMatcherResult(matchSchema(received, schema), 'toMatchSchema', received, schema);
+} 

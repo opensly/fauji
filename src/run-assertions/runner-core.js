@@ -1,8 +1,9 @@
 // Core test runner logic for Fauji
-const { rootSuite } = require('./suite');
-const { Logger } = require('./logger');
-const { allMatchers } = require('../matchers');
+import { rootSuite } from './suite.js';
+import { Logger } from './logger.js';
+import * as allMatchersModule from '../matchers/index.js';
 
+const allMatchers = allMatchersModule.allMatchers || allMatchersModule.default || allMatchersModule;
 const _log = new Logger();
 
 /**
@@ -122,7 +123,7 @@ function run() {
     _log.printSummary();
     if (process.env.FAUJI_REPORT || global.FAUJI_REPORT) {
       const type = process.env.FAUJI_REPORT || global.FAUJI_REPORT;
-      const fs = require('fs');
+      const fs = await import('fs');
       if (type === 'html') {
         fs.writeFileSync('fauji-report.html', _log.getResultsHTML(), 'utf8');
         console.log('HTML report written to fauji-report.html');
@@ -146,10 +147,4 @@ function expect(exp) {
   return allMatchers(exp);
 }
 
-module.exports = {
-  run,
-  expect,
-  runSuite,
-  filterOnlySuites,
-  hasOnly,
-}; 
+export { run, expect, runSuite, filterOnlySuites, hasOnly }; 

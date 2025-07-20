@@ -9,7 +9,15 @@
  * 4. Use loadCache/saveCache for test run caching (async)
  * 5. Call setupJsdomIfNeeded(options) if needed
  */
-const { findTestFiles } = require('./test-discovery');
-const { runTestFiles } = require('./test-execution');
-const { loadCache, saveCache } = require('./cache');
-const { setupJsdomIfNeeded } = require('./env-setup');
+import { findTestFiles } from './test-discovery.js';
+import { runTestFiles } from './test-execution.js';
+import { loadCache, saveCache } from './cache.js';
+import { setupJsdomIfNeeded } from './env-setup.js';
+
+export default {
+  findTestFiles,
+  runTestFiles,
+  loadCache,
+  saveCache,
+  setupJsdomIfNeeded,
+};

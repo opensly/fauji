@@ -1,5 +1,5 @@
 // Test and suite registration for Fauji
-const { Suite, getCurrentSuite, setCurrentSuite } = require('./suite');
+import { rootSuite } from './suite.js';
 
 /**
  * Register a fixture for the current suite.
@@ -91,8 +91,4 @@ function _test(desc, fn, mode, options) {
   });
 }
 
-module.exports = {
-  describe,
-  test,
-  fixture,
-}; 
+export { describe, test }; 

@@ -1,6 +1,5 @@
-// toHaveLength matcher for Fauji
-const { getMatcherResult } = require('./utils');
+import { getMatcherResult } from './utils.js';
 
-module.exports = {
-  toHaveLength: (received, expected) => getMatcherResult(received && received.length == expected, 'toHaveLength', received, expected),
-}; 
+export function toHaveLength(received, expected) {
+  return getMatcherResult(received && received.length == expected, 'toHaveLength', received, expected);
+} 

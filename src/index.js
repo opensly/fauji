@@ -1,21 +1,10 @@
-// Export main modules for library entry point
-const runner = require('./run-assertions/runner');
-const logger = require('./run-assertions/logger');
-const setupGlobals = require('./run-assertions/setup-globals');
-const matchers = require('./matchers/index.js');
-const spy = require('./matchers/spy').spy;
-const stub = require('./matchers/spy').stub;
-const mock = require('./matchers/spy').mock;
-const { run } = require('./run-assertions/runner-core');
+// Export main modules for library entry point (ESM)
+import runner from './run-assertions/runner.js';
+import { Logger } from './run-assertions/logger.js';
+import setupGlobals from './run-assertions/setup-globals.js';
+import * as matchers from './matchers/index.js';
+import { spy, stub, mock } from './matchers/spy.js';
+import { run } from './run-assertions/runner-core.js';
 
-module.exports = {
-  runner,
-  logger,
-  setupGlobals,
-  run,
-  addMatchers: matchers.addMatchers,
-  ...matchers,
-  spy,
-  stub,
-  mock,
-};
+export { runner, Logger, setupGlobals, run, spy, stub, mock };
+export * from './matchers/index.js';

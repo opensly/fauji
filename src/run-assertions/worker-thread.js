@@ -1,4 +1,4 @@
-const { parentPort, workerData } = require('worker_threads');
+import { parentPort, workerData } from 'worker_threads';
 const { testFile, env } = workerData;
 
 // Set environment variables
@@ -23,24 +23,26 @@ process.stderr.write = (chunk, ...args) => {
 
 let error = null;
 
-try {
-  require(require.resolve('./setup-globals.js'));
-  require(require('path').resolve(testFile));
-  // Automatically call run() if defined, to match Jest/Vitest
-  if (typeof global.run === 'function') {
-    global.run();
+(async () => {
+  try {
+    await import(new URL('./setup-globals.js', import.meta.url));
+    await import(new URL(testFile, `file://${process.cwd()}/`).href);
+    // Automatically call run() if defined, to match Jest/Vitest
+    if (typeof global.run === 'function') {
+      global.run();
+    }
+  } catch (e) {
+    error = e.stack || e.message || String(e);
   }
-} catch (e) {
-  error = e.stack || e.message || String(e);
-}
 
-// Wait for process exit to send results
-process.on('exit', (code) => {
-  parentPort.postMessage({
-    type: 'result',
-    stdout: capturedStdout,
-    stderr: capturedStderr,
-    error,
-    code
+  // Wait for process exit to send results
+  process.on('exit', (code) => {
+    parentPort.postMessage({
+      type: 'result',
+      stdout: capturedStdout,
+      stderr: capturedStderr,
+      error,
+      code
+    });
   });
-}); 
+})(); 

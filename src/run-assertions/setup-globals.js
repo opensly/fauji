@@ -1,9 +1,9 @@
-const { describe, test } = require('./registration');
-const { beforeAll, afterAll, beforeEach, afterEach } = require('./hooks');
-const { run } = require('./runner-core');
-const matchers = require('../matchers/index.js');
-const fakeTimers = require('./fake-timers');
-const spy = require('../matchers/spy');
+import { describe, test } from './registration.js';
+import { beforeAll, afterAll, beforeEach, afterEach } from './hooks.js';
+import { run } from './runner-core.js';
+import * as matchers from '../matchers/index.js';
+import * as fakeTimers from './fake-timers.js';
+import * as spy from '../matchers/spy.js';
 
 function setupGlobals() {
   global.describe = describe;
@@ -35,13 +35,17 @@ function setupGlobals() {
   global.getTimerCallCount = fakeTimers.getTimerCallCount;
 }
 
-module.exports = setupGlobals;
+export default setupGlobals;
 
 // --- Fauji CLI auto-run support ---
-if (require.main === module && process.argv[2]) {
-  setupGlobals();
-  // If this file is run directly with a test file as argument (from CLI)
-  const testFile = process.argv[2];
-  require(require('path').resolve(testFile));
-  run();
+async function cliAutoRun() {
+  if (process.argv[1] && process.argv[1].endsWith('setup-globals.js') && process.argv[2]) {
+    setupGlobals();
+    const testFile = process.argv[2];
+    await import(new URL(testFile, `file://${process.cwd()}/`).href);
+    run();
+  }
+}
+if (typeof process !== 'undefined' && process.argv && process.argv[1] && process.argv[1].endsWith('setup-globals.js')) {
+  cliAutoRun();
 } 

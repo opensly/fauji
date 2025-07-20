@@ -1,6 +1,5 @@
-// Empty matcher for Fauji
-const { getMatcherResult, isEmpty } = require('./utils');
+import { getMatcherResult, isEmpty } from './utils.js';
 
-module.exports = {
-  toBeEmpty: (received) => getMatcherResult(isEmpty(received), 'toBeEmpty', received),
-}; 
+export function toBeEmpty(received) {
+  return getMatcherResult(isEmpty(received), 'toBeEmpty', received);
+} 

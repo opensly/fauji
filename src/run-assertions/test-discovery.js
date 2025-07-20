@@ -1,9 +1,9 @@
 // Async test file discovery for Fauji
-const fs = require('fs').promises;
-const path = require('path');
-const isEmptyDir = require('is-empty-dir');
+import fs from 'fs/promises';
+import path from 'path';
+import isEmptyDir from 'is-empty-dir';
 
-async function findTestFiles({ dir, pattern, name }) {
+export async function findTestFiles({ dir, pattern, name }) {
   // Check if the directory is empty (ignoring dotfiles and node_modules)
   const empty = await isEmptyDir(dir, { ignore: [/^\./, 'node_modules'] });
   if (empty) {
@@ -29,6 +29,4 @@ async function findTestFiles({ dir, pattern, name }) {
   }
   await getFilesOfDir(dir);
   return testFiles;
-}
-
-module.exports = { findTestFiles }; 
+} 

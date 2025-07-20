@@ -1,6 +1,5 @@
-// Satisfy matcher for Fauji
-const { getMatcherResult } = require('./utils');
+import { getMatcherResult } from './utils.js';
 
-module.exports = {
-  toSatisfy: (received, predicate) => getMatcherResult(typeof predicate === 'function' && predicate(received), 'toSatisfy', received, predicate),
-}; 
+export function toSatisfy(received, predicate) {
+  return getMatcherResult(typeof predicate === 'function' && predicate(received), 'toSatisfy', received, predicate);
+} 

@@ -1,9 +1,14 @@
-// Validation matchers for Fauji
-const { getMatcherResult, isValidJSON, isValidURL, isValidEmail, isValidUUID } = require('./utils');
+import { getMatcherResult, isValidJSON, isValidURL, isValidEmail, isValidUUID } from './utils.js';
 
-module.exports = {
-  toBeValidJSON: (received) => getMatcherResult(isValidJSON(received), 'toBeValidJSON', received),
-  toBeValidURL: (received) => getMatcherResult(isValidURL(received), 'toBeValidURL', received),
-  toBeValidEmail: (received) => getMatcherResult(isValidEmail(received), 'toBeValidEmail', received),
-  toBeValidUUID: (received) => getMatcherResult(isValidUUID(received), 'toBeValidUUID', received),
-}; 
+export function toBeValidJSON(received) {
+  return getMatcherResult(isValidJSON(received), 'toBeValidJSON', received);
+}
+export function toBeValidURL(received) {
+  return getMatcherResult(isValidURL(received), 'toBeValidURL', received);
+}
+export function toBeValidEmail(received) {
+  return getMatcherResult(isValidEmail(received), 'toBeValidEmail', received);
+}
+export function toBeValidUUID(received) {
+  return getMatcherResult(isValidUUID(received), 'toBeValidUUID', received);
+} 

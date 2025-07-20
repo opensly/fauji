@@ -1,6 +1,6 @@
-const _colors = require('colors/safe');
-const diff = require('diff');
-const fs = require('fs');
+import * as colors from 'colors/safe';
+import * as diff from 'diff';
+import fs from 'fs';
 
 class Logger {
   constructor() {
@@ -28,15 +28,15 @@ class Logger {
   perceive(context, msg, annotations) {
     if (context === 'describe') {
       this.suiteStack.push(msg);
-      let ann = annotations && Object.keys(annotations).length ? ' ' + _colors.cyan(JSON.stringify(annotations)) : '';
-      console.log(_colors.bold('\n' + msg) + ann);
+      let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
+      console.log(colors.bold('\n' + msg) + ann);
     } else if (context === 'test') {
       this.currentTest = { name: msg, suite: [...this.suiteStack], status: null, error: null, duration: 0, skipped: false };
       if (annotations && Object.keys(annotations).length) {
         this.currentTest.annotations = annotations;
       }
       this.currentTest.start = Date.now();
-      let ann = annotations && Object.keys(annotations).length ? ' ' + _colors.cyan(JSON.stringify(annotations)) : '';
+      let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
       process.stdout.write('  ' + msg + ann);
     }
   }
@@ -49,18 +49,18 @@ class Logger {
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
-        console.log(' ' + _colors.yellow('- SKIPPED'));
+        console.log(' ' + colors.yellow('- SKIPPED'));
       } else if (result) {
         this.passed++;
         this.currentTest.status = 'passed';
         let slow = this.currentTest.duration > this.slowThreshold;
-        let slowMsg = slow ? _colors.yellow(' (SLOW)') : '';
-        console.log(' ' + _colors.green('✓') + slowMsg);
+        let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
+        console.log(' ' + colors.green('✓') + slowMsg);
       } else {
         this.failed++;
         this.currentTest.status = 'failed';
         this.currentTest.error = error;
-        console.log(' ' + _colors.red('✗'));
+        console.log(' ' + colors.red('✗'));
         this.printErrorDetails(error);
       }
       this.testResults.push(this.currentTest);
@@ -71,7 +71,7 @@ class Logger {
 
   error(message) {
     this.lastError = message;
-    console.error(_colors.red(message));
+    console.error(colors.red(message));
   }
 
   printErrorDetails(error) {
@@ -79,11 +79,11 @@ class Logger {
     if (error.expected !== undefined && error.actual !== undefined) {
       // Assertion diff
       const diffLines = diff.createPatch('difference', String(error.expected), String(error.actual)).split('\n').slice(4);
-      console.error(_colors.red('--- Expected'));
-      console.error(_colors.green('+++ Received'));
+      console.error(colors.red('--- Expected'));
+      console.error(colors.green('+++ Received'));
       diffLines.forEach(line => {
-        if (line.startsWith('-')) console.error(_colors.red(line));
-        else if (line.startsWith('+')) console.error(_colors.green(line));
+        if (line.startsWith('-')) console.error(colors.red(line));
+        else if (line.startsWith('+')) console.error(colors.green(line));
         else console.error(line);
       });
     }
@@ -97,7 +97,7 @@ class Logger {
           const start = Math.max(0, line - 3);
           const end = Math.min(lines.length, line + 2);
           for (let i = start; i < end; i++) {
-            const prefix = (i + 1 === line) ? _colors.bgRed.white('>') : ' ';
+            const prefix = (i + 1 === line) ? colors.bgRed.white('>') : ' ';
             console.error(prefix + ' ' + (i + 1).toString().padStart(4) + ' | ' + lines[i]);
           }
         } catch {}
@@ -105,9 +105,9 @@ class Logger {
     }
     // Stack trace
     if (error.stack) {
-      console.error(_colors.gray(error.stack));
+      console.error(colors.gray(error.stack));
     } else {
-      console.error(_colors.red(error.toString()));
+      console.error(colors.red(error.toString()));
     }
   }
 
@@ -115,7 +115,7 @@ class Logger {
     const done = this.passed + this.failed + this.skipped;
     const percent = done / this.total;
     const filled = Math.round(this.progressBarLength * percent);
-    const bar = _colors.green('█'.repeat(filled)) + _colors.gray('░'.repeat(this.progressBarLength - filled));
+    const bar = colors.green('█'.repeat(filled)) + colors.gray('░'.repeat(this.progressBarLength - filled));
     process.stdout.write(`\rProgress: [${bar}] ${done}/${this.total}`);
     if (done === this.total) process.stdout.write('\n');
   }
@@ -176,15 +176,15 @@ class Logger {
   printSummary() {
     this.endTimer();
     const duration = this.endTime && this.startTime ? (this.endTime - this.startTime) : 0;
-    console.log(_colors.bold('\nTest Suites: ') + `${this.failed > 0 ? _colors.red(this.failed + ' failed') : _colors.green(this.passed + ' passed')} | ${this.total} total | ${_colors.yellow(this.skipped + ' skipped')}`);
-    console.log(_colors.bold('Tests:      ') + `${_colors.green(this.passed + ' passed')}, ${_colors.red(this.failed + ' failed')}, ${_colors.yellow(this.skipped + ' skipped')}, ${this.total} total`);
-    console.log(_colors.bold('Time:       ') + `${(duration / 1000).toFixed(2)}s`);
+    console.log(colors.bold('\nTest Suites: ') + `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`);
+    console.log(colors.bold('Tests:      ') + `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`);
+    console.log(colors.bold('Time:       ') + `${(duration / 1000).toFixed(2)}s`);
     for (const result of this.testResults) {
       const suitePath = result.suite.length ? result.suite.join(' > ') + ' > ' : '';
-      const statusColor = result.status === 'passed' ? _colors.green : result.status === 'skipped' ? _colors.yellow : _colors.red;
+      const statusColor = result.status === 'passed' ? colors.green : result.status === 'skipped' ? colors.yellow : colors.red;
       let slow = result.duration > this.slowThreshold;
-      let slowMsg = slow ? _colors.yellow(' (SLOW)') : '';
-      console.log('  ' + statusColor(result.status.toUpperCase()) + ' ' + suitePath + result.name + _colors.gray(` (${result.duration}ms)`) + slowMsg);
+      let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
+      console.log('  ' + statusColor(result.status.toUpperCase()) + ' ' + suitePath + result.name + colors.gray(` (${result.duration}ms)`) + slowMsg);
       if (result.status === 'failed' && result.error) {
         this.printErrorDetails(result.error);
       }
@@ -192,4 +192,4 @@ class Logger {
   }
 }
 
-module.exports = { Logger }
+export { Logger };
