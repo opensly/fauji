@@ -9,6 +9,8 @@
   "description": "lightweight testing framework for JavaScript/TypeScript",
   "dependencies": {
     "colors": "^1.4.0",
+    "deep-equal-check": "^1.0.0",
+    "diff": "^8.0.2",
     "file-system": "^2.2.2",
     "is-empty-dir": "^1.0.0"
   },
@@ -16,6 +18,7 @@
     "esbuild": "^0.25.5"
   },
   "scripts": {
-    "build": "esbuild src/index.js --bundle --platform=node --outfile=dist/index.js --sourcemap --external:./src/run-assertions/setup-globals.js"
+    "build": "esbuild src/index.js --bundle --platform=node --outfile=dist/index.js --sourcemap --external:./src/run-assertions/setup-globals.js --external:./src/run-assertions/worker-thread.js && npm run postbuild",
+    "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner"
   }
 }

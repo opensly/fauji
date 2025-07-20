@@ -211,7 +211,6 @@ module.exports = {
   mock: mock,
   fn,
   spyOn,
-  mock,
   unmock,
   resetAllMocks,
   requireActual,

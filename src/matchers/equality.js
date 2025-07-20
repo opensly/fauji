@@ -1,5 +1,6 @@
 // Equality matchers for Fauji
-const { getMatcherResult, deepEqual } = require('./utils');
+const { getMatcherResult } = require('./utils');
+const deepEqual = require('deep-equal-check');
 
 module.exports = {
   toBe: (received, expected) => getMatcherResult(received === expected, 'toBe', received, expected),
