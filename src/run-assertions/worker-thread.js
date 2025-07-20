@@ -26,7 +26,10 @@ let error = null;
 try {
   require(require.resolve('./setup-globals.js'));
   require(require('path').resolve(testFile));
-  // The global run() should be called by setup-globals.js logic after requiring the test file
+  // Automatically call run() if defined, to match Jest/Vitest
+  if (typeof global.run === 'function') {
+    global.run();
+  }
 } catch (e) {
   error = e.stack || e.message || String(e);
 }

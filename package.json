@@ -1,24 +1,51 @@
 {
   "name": "fauji",
   "version": "0.0.1",
+  "description": "Lightweight testing framework for JavaScript/TypeScript",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.cjs"
+  },
+  "type": "module",
   "bin": {
     "fauji": "./dist/bin/runner"
   },
-  "main": "dist/index.js",
-  "typings": "./src/matchers/index.d.ts",
-  "description": "lightweight testing framework for JavaScript/TypeScript",
+  "scripts": {
+    "build:cjs": "esbuild src/index.js --bundle --platform=node --format=cjs --outfile=dist/index.cjs --sourcemap --external:./src/run-assertions/worker-thread.js",
+    "build:esm": "esbuild src/index.js --bundle --platform=node --format=esm --outfile=dist/index.mjs --sourcemap --external:./src/run-assertions/worker-thread.js",
+    "build:types": "cp src/matchers/index.d.ts dist/index.d.ts",
+    "build": "npm run build:cjs && npm run build:esm && npm run build:types && npm run postbuild",
+    "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opensly/fauji.git"
+  },
+  "keywords": [
+    "testing",
+    "framework",
+    "javascript",
+    "typescript",
+    "assertions"
+  ],
+  "author": "Lakshmikanth Vallampati <kanth.vallampati@gmail.com>",
+  "license": "MIT",
   "dependencies": {
+    "@sinonjs/fake-timers": "^14.0.0",
     "colors": "^1.4.0",
     "deep-equal-check": "^1.0.0",
     "diff": "^8.0.2",
-    "file-system": "^2.2.2",
+    "file-system": "^1.2.2",
     "is-empty-dir": "^1.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.5"
-  },
-  "scripts": {
-    "build": "esbuild src/index.js --bundle --platform=node --outfile=dist/index.js --sourcemap --external:./src/run-assertions/setup-globals.js --external:./src/run-assertions/worker-thread.js && npm run postbuild",
-    "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner"
   }
 }

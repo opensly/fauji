@@ -14,7 +14,44 @@ const throwMatcher = require('./throw');
 const length = require('./length');
 const utils = require('./utils');
 
-const allMatchers = {
+// Global matcher registry for extensibility
+const customMatchers = {};
+
+function addMatchers(matchers) {
+  Object.assign(customMatchers, matchers);
+}
+
+function allMatchers(received) {
+  const builtIn = {
+    ...equality,
+    ...type,
+    ...string,
+    ...object,
+    ...number,
+    ...spyMatchers,
+    ...asyncMatchers,
+    ...schema,
+    ...empty,
+    ...validation,
+    ...satisfy,
+    ...throwMatcher,
+    ...length,
+    ...utils,
+  };
+  const matchers = { ...builtIn, ...customMatchers };
+  const proxy = {};
+  for (const key of Object.keys(matchers)) {
+    proxy[key] = (...args) => matchers[key](received, ...args);
+  }
+  // Support .not
+  proxy.not = {};
+  for (const key of Object.keys(matchers)) {
+    proxy.not[key] = (...args) => !matchers[key](received, ...args);
+  }
+  return proxy;
+}
+
+module.exports = {
   ...equality,
   ...type,
   ...string,
@@ -28,9 +65,7 @@ const allMatchers = {
   ...satisfy,
   ...throwMatcher,
   ...length,
-};
-
-module.exports = {
-  ...allMatchers,
   ...utils,
+  addMatchers,
+  allMatchers,
 }; 
