@@ -1,13 +1,13 @@
 // Equality matchers for Fauji
 import { getMatcherResult } from './utils.js';
-import deepEqual from 'deep-equal-check';
+import deepEqualCheck from 'deep-equal-check';
 
 export function toBe(received, expected) {
   return getMatcherResult(received === expected, 'toBe', received, expected);
 }
 
 export function toEqual(received, expected) {
-  return getMatcherResult(deepEqual(received, expected), 'toEqual', received, expected);
+  return getMatcherResult(deepEqualCheck(received, expected), 'toEqual', received, expected);
 }
 
 export function toBeNull(received) {

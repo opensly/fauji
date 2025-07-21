@@ -22,7 +22,10 @@ export async function runTestFiles(testFiles, options = {}) {
       running++;
       const env = { ...process.env };
       if (options.report) env.FAUJI_REPORT = options.report;
-      const worker = new Worker(new URL('./worker-thread.js', import.meta.url), {
+      // Determine the correct extension for the worker file
+      const currentExt = import.meta.url.split('.').pop();
+      const workerExt = currentExt === 'cjs' ? '.cjs' : '.mjs';
+      const worker = new Worker(new URL(`./worker-thread${workerExt}`, import.meta.url), {
         workerData: { testFile: file, env }
       });
       worker.on('message', (msg) => {

@@ -1,11 +1,12 @@
 // Matcher utilities for Fauji
 import util from 'util';
-import deepEqual from 'deep-equal-check';
+import deepEqualCheck from 'deep-equal-check';
+import fs from 'fs';
 
 export function isMatch(obj, partial) {
   if (typeof obj !== 'object' || obj === null || typeof partial !== 'object' || partial === null) return false;
   for (const key of Object.keys(partial)) {
-    if (!(key in obj) || !deepEqual(obj[key], partial[key])) return false;
+    if (!(key in obj) || !deepEqualCheck(obj[key], partial[key])) return false;
   }
   return true;
 }
@@ -50,7 +51,6 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
       if (location) {
         const [file, line, col] = location.split(/:|\//).slice(-3);
         try {
-          const fs = require('fs');
           const lines = fs.readFileSync(location.split(':')[0], 'utf8').split('\n');
           const lineNum = parseInt(line, 10) - 1;
           const start = Math.max(0, lineNum - 2);
@@ -133,5 +133,3 @@ export function matchSchema(obj, schema) {
   }
   return true;
 }
-
-export { deepEqual }; 

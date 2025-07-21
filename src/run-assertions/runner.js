@@ -14,6 +14,12 @@ import { runTestFiles } from './test-execution.js';
 import { loadCache, saveCache } from './cache.js';
 import { setupJsdomIfNeeded } from './env-setup.js';
 
+export async function runner(options) {
+  await setupJsdomIfNeeded(options);
+  const files = await findTestFiles(options);
+  await runTestFiles(files, options);
+}
+
 export default {
   findTestFiles,
   runTestFiles,

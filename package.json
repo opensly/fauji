@@ -1,24 +1,28 @@
 {
   "name": "fauji",
-  "version": "0.0.1",
+  "version": "0.0.24",
   "description": "Lightweight testing framework for JavaScript/TypeScript",
-  "main": "dist/index.cjs",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "main": "dist/cjs/index.cjs",
+  "module": "dist/esm/index.mjs",
+  "types": "dist/esm/index.d.ts",
   "exports": {
-    "import": "./dist/index.mjs",
-    "require": "./dist/index.cjs"
+    ".": {
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./bin/runner": "./bin/runner"
   },
   "type": "module",
   "bin": {
-    "fauji": "./dist/bin/runner"
+    "fauji": "./bin/runner"
   },
   "scripts": {
-    "build:cjs": "esbuild src/index.js --bundle --platform=node --format=cjs --outfile=dist/index.cjs --sourcemap --external:./src/run-assertions/worker-thread.js --external:jsdom",
-    "build:esm": "esbuild src/index.js --bundle --platform=node --format=esm --outfile=dist/index.mjs --sourcemap --external:./src/run-assertions/worker-thread.js --external:jsdom",
-    "build:types": "tsc --emitDeclarationOnly --declaration --project tsconfig.json",
-    "build": "npm run build:cjs && npm run build:esm && npm run build:types && npm run postbuild",
-    "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner",
+    "clean": "rm -rf dist",
+    "build:esm": "rollup -c --configPlugin @rollup/plugin-node-resolve --environment BUILD:esm",
+    "build:cjs": "rollup -c --configPlugin @rollup/plugin-node-resolve --environment BUILD:cjs",
+    "build:types": "echo 'No type build needed (using .d.ts files)'",
+    "postbuild": "mkdir -p dist/bin && cp bin/runner dist/bin/runner && chmod +x dist/bin/runner && mkdir -p dist/esm/matchers && cp src/matchers/*.d.ts dist/esm/matchers/",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:types && npm run postbuild",
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write .",
@@ -37,16 +41,29 @@
   ],
   "author": "Lakshmikanth Vallampati <kanth.vallampati@gmail.com>",
   "license": "MIT",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@sinonjs/fake-timers": "^14.0.0",
     "colors": "^1.4.0",
-    "deep-equal-check": "^1.0.0",
+    "deep-equal-check": "http://localhost:4873/deep-equal-check/-/deep-equal-check-1.1.0.tgz",
     "diff": "^8.0.2",
     "file-system": "^1.2.2",
-    "is-empty-dir": "^1.0.0"
+    "is-empty-dir": "http://localhost:4873/is-empty-dir/-/is-empty-dir-1.1.0.tgz",
+    "glob": "^10.3.10"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.4",
     "esbuild": "^0.25.5",
+    "rollup": "^4.45.1",
+    "rollup-plugin-dts": "^6.2.1",
     "typescript": "^5.8.3"
   }
 }

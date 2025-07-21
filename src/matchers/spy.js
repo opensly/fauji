@@ -89,12 +89,12 @@ function isBuiltinModule(modulePath) {
   return builtins.includes(modulePath) || builtins.includes(modulePath.replace(/^node:/, ''));
 }
 
-export function mock(modulePath, mockImpl) {
+export async function mock(modulePath, mockImpl) {
   let resolved;
   if (isBuiltinModule(modulePath)) {
     resolved = modulePath;
     if (!_originalModules.has(resolved)) {
-      _originalModules.set(resolved, require(modulePath));
+      _originalModules.set(resolved, (await import(modulePath)).default ?? (await import(modulePath)));
     }
     require.cache[resolved] = { exports: mockImpl };
     _mockedModules.set(resolved, mockImpl);
@@ -103,19 +103,19 @@ export function mock(modulePath, mockImpl) {
     resolved = require.resolve(modulePath);
   }
   if (!_originalModules.has(resolved)) {
-    _originalModules.set(resolved, require.cache[resolved]);
+    _originalModules.set(resolved, (await import(resolved)).default ?? (await import(resolved)));
   }
   let mockExports;
   if (mockImpl === undefined) {
     const manualMockPath = findManualMock(resolved);
     if (manualMockPath) {
-      mockExports = require(manualMockPath);
+      mockExports = (await import(manualMockPath)).default ?? (await import(manualMockPath));
     } else {
-      const realExports = require(resolved);
+      const realExports = (await import(resolved)).default ?? (await import(resolved));
       mockExports = autoMockExports(realExports);
     }
   } else if (typeof mockImpl === 'object' && !Array.isArray(mockImpl)) {
-    const realExports = require(resolved);
+    const realExports = (await import(resolved)).default ?? (await import(resolved));
     mockExports = { ...realExports, ...mockImpl };
     for (const key of Object.keys(mockImpl)) {
       if (typeof mockImpl[key] === 'function' && !mockImpl[key].mock) {
@@ -151,18 +151,18 @@ export function resetAllMocks() {
   _originalModules.clear();
 }
 
-export function requireActual(modulePath) {
+export async function requireActual(modulePath) {
   const resolved = require.resolve(modulePath);
   if (_originalModules.has(resolved)) {
     return _originalModules.get(resolved).exports;
   }
-  return require(resolved);
+  return (await import(resolved)).default ?? (await import(resolved));
 }
 
-export function requireMock(modulePath) {
+export async function requireMock(modulePath) {
   const resolved = require.resolve(modulePath);
   if (_mockedModules.has(resolved)) {
     return _mockedModules.get(resolved);
   }
-  return require(resolved);
+  return (await import(resolved)).default ?? (await import(resolved));
 } 

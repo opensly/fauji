@@ -9,6 +9,7 @@
 # profiling files
 chrome-profiler-events*.json
 
+dist/
 # IDEs and editors
 /.idea
 .project

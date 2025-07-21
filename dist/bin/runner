@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 process.title = 'fauji';
+
+// Polyfill __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper to print usage
 function printHelp() {
@@ -65,28 +70,59 @@ for (let i = 0; i < args.length; i++) {
 // Load config file if present
 const cwd = process.cwd();
 let config = {};
-if (!configFile) {
-  if (fs.existsSync(path.join(cwd, 'fauji.config.js'))) configFile = path.join(cwd, 'fauji.config.js');
-  else if (fs.existsSync(path.join(cwd, 'fauji.config.json'))) configFile = path.join(cwd, 'fauji.config.json');
+const configPath = path.join(cwd, 'fauji.config.json');
+if (!fs.existsSync(configPath)) {
+  console.error('Error: fauji.config.json not found in the project root. Please create one to configure Fauji.');
+  process.exit(1);
 }
-if (configFile) {
+let targetDir, testMatch;
+const allowedPatterns = [
+  '**.test.js', 
+  '**.spec.js', 
+  '**.test.ts', 
+  '**.spec.ts',
+  '**/*.test.js', 
+  '**/*.spec.js', 
+  '**/*.test.ts', 
+  '**/*.spec.ts'
+];
+if (fs.existsSync(configPath)) {
   try {
-    config = require(configFile);
-    if (config.default) config = config.default; // handle ES module
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (!config.sourceDirectory || !config.testMatch) {
+      throw new Error('fauji.config.json must specify both "sourceDirectory" and "testMatch" properties.');
+    }
+    if (!Array.isArray(config.testMatch) || config.testMatch.some(p => !allowedPatterns.includes(p))) {
+      throw new Error('fauji.config.json "testMatch" must be an array of allowed patterns: ' + allowedPatterns.join(', '));
+    }
+    targetDir = config.sourceDirectory === '.' ? cwd : path.join(cwd, config.sourceDirectory);
+    testMatch = config.testMatch;
   } catch (e) {
-    console.error('Failed to load config file:', configFile, e);
+    console.error('Failed to load config file:', configPath, e);
     process.exit(1);
   }
 }
 // Merge CLI options (CLI takes precedence)
-const finalOptions = { ...config, ...options };
+const runnerConfig = { targetDir, testMatch, ...options };
 
-// Try to require dist build, fallback to src for dev
+// Try to import dist build only; if it fails, print a clear error and exit
+// Determine which build to import: ESM (.mjs) or CJS (.cjs)
 let mainRunner;
 try {
-  mainRunner = require('../dist/index.js').runner;
+  let mainPath;
+  // If the process was spawned as ESM, use esm/index.mjs; if CJS, use cjs/index.cjs
+  if (process.env.FAUJI_FORCE_CJS) {
+    mainPath = path.join(__dirname, '../dist/cjs/index.cjs');
+  } else {
+    mainPath = path.join(__dirname, '../dist/esm/index.mjs');
+  }
+  const imported = await import(pathToFileURL(mainPath).href);
+  mainRunner = imported.runner;
 } catch (e) {
-  mainRunner = require('../src/run-assertions/runner');
+  console.error('Failed to load Fauji test runner from dist build.');
+  console.error('This likely means the package was not built correctly or is missing files.');
+  console.error(e);
+  process.exit(1);
 }
 
-mainRunner(finalOptions);
+mainRunner(runnerConfig);

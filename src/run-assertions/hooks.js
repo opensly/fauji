@@ -1,7 +1,7 @@
 // Hook registration for Fauji
 import { rootSuite } from './suite.js';
-const fakeTimers = require('./fake-timers');
-const spy = require('../matchers/spy');
+import * as fakeTimers from './fake-timers';
+import * as spy from '../matchers/spy';
 
 function beforeAll(fn) {
   rootSuite.hooks.beforeAll.push(fn);
