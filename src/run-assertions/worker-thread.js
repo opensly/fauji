@@ -35,17 +35,23 @@ let testResults = null;
     }
     
     if (global._log && typeof global._log.getResultsJSON === 'function') {
+      // FIX: Call endTimer before getting results to ensure duration is calculated
+      global._log.endTimer();
+      
       testResults = global._log.getResultsJSON();
-
       const endTime = Date.now();
+      
+      // Set the timing info
       testResults.startTime = startTime;
       testResults.endTime = endTime;
-      testResults.duration = testResults.endTime - testResults.startTime;
+      testResults.duration = endTime - startTime;
 
+      // FIX: Ensure individual test durations are properly calculated
       if (testResults.tests) {
         testResults.tests = testResults.tests.map(test => ({
           ...test,
-          duration: test.duration || (test.endTime - test.startTime)
+          // Use existing duration if available, otherwise calculate from start/end times
+          duration: test.duration || (test.endTime && test.startTime ? test.endTime - test.startTime : 0)
         }));
       }
     }
@@ -64,4 +70,4 @@ let testResults = null;
       testResults
     });
   });
-})(); 
+})();

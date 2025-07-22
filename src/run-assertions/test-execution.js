@@ -60,8 +60,8 @@ export async function runTestFiles(testFiles, options = {}) {
               }
             }
             
-            // Print summary only if we have results
-            if (logger.testResults.total > 0) {
+            // Print summary only if we have results - FIX: Check array length, not .total property
+            if (logger.testResults.length > 0) {
               logger.printSummary();
               if (failed > 0) {
                 console.log(colors.red(`\n${failed} test file(s) failed.`));
@@ -103,4 +103,4 @@ export async function runTestFiles(testFiles, options = {}) {
       runNext();
     }
   });
-} 
+}

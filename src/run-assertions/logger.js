@@ -30,11 +30,20 @@ class Logger {
       let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
       console.log(colors.bold('\n' + msg) + ann);
     } else if (context === 'test') {
-      this.currentTest = { name: msg, suite: [...this.suiteStack], status: null, error: null, duration: 0, skipped: false };
+      // FIX: Capture start time properly
+      const startTime = Date.now();
+      this.currentTest = { 
+        name: msg, 
+        suite: [...this.suiteStack], 
+        status: null, 
+        error: null, 
+        duration: 0, 
+        skipped: false,
+        startTime: startTime  // Store the start time
+      };
       if (annotations && Object.keys(annotations).length) {
         this.currentTest.annotations = annotations;
       }
-      this.currentTest.start = Date.now();
       let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
       process.stdout.write('  ' + msg + ann);
     }
@@ -43,8 +52,12 @@ class Logger {
   status(result, error = null, skipped = false) {
     this.total++;
     if (this.currentTest) {
-      this.currentTest.duration = Date.now() - this.currentTest.start;
+      // FIX: Calculate duration properly using stored start time
+      const endTime = Date.now();
+      this.currentTest.endTime = endTime;
+      this.currentTest.duration = endTime - this.currentTest.startTime;
       this.currentTest.skipped = skipped;
+      
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
@@ -128,18 +141,25 @@ class Logger {
         status: r.status,
         error: r.error ? (r.error.stack || r.error.toString()) : null,
         duration: r.duration,
+        startTime: r.startTime,
+        endTime: r.endTime,
         annotations: r.annotations || {},
       }))
     };
   }
 
   printSummary() {
-    this.endTimer();
+    // FIX: Ensure endTimer is called if not already
+    if (!this.endTime && this.startTime) {
+      this.endTimer();
+    }
+    
     const duration = this.endTime && this.startTime ? (this.endTime - this.startTime) : 0;
     if (this.testResults.length === 0) {
       console.log(colors.yellow('No tests found.'));
       return;
     }
+    
     for (const result of this.testResults) {
       const suitePath = result.suite.filter(s => s !== 'root').length 
         ? result.suite.filter(s => s !== 'root').join(' > ') + ' > ' 
@@ -174,7 +194,6 @@ class Logger {
     console.log(
       colors.bold(' Time:        ') + `${(duration / 1000).toFixed(3)}s`
     );
-    
   }
 }
 
