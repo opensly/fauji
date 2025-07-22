@@ -136,23 +136,45 @@ class Logger {
   printSummary() {
     this.endTimer();
     const duration = this.endTime && this.startTime ? (this.endTime - this.startTime) : 0;
-    if (this.total === 0) {
+    if (this.testResults.length === 0) {
       console.log(colors.yellow('No tests found.'));
       return;
     }
     for (const result of this.testResults) {
-      const suitePath = result.suite.filter(s => s !== 'root').length ? result.suite.filter(s => s !== 'root').join(' > ') + ' > ' : '';
+      const suitePath = result.suite.filter(s => s !== 'root').length 
+        ? result.suite.filter(s => s !== 'root').join(' > ') + ' > ' 
+        : '';
       const statusColor = result.status === 'passed' ? colors.green : result.status === 'skipped' ? colors.yellow : colors.red;
       let slow = result.duration > this.slowThreshold;
       let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-      console.log('  ' + statusColor(result.status.toUpperCase()) + ' ' + suitePath + result.name + colors.gray(` (${result.duration}ms)`) + slowMsg);
+      
+      console.log(
+        '  ' + 
+        statusColor(result.status.toUpperCase()) + 
+        ' ' + 
+        suitePath + 
+        result.name + 
+        colors.gray(` (${result.duration}ms)`) + 
+        slowMsg
+      );
+
       if (result.status === 'failed' && result.error) {
         this.printErrorDetails(result.error);
       }
     }
-    console.log(colors.bold(`\n Test Suites: `) + `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`);
-    console.log(colors.bold(' Tests:       ') + `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`);
-    console.log(colors.bold(' Time:        ') + `${(duration / 1000).toFixed(2)}s`);
+    
+    console.log(
+      colors.bold(`\n Test Suites: `) + 
+      `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`
+    );
+    console.log(
+      colors.bold(' Tests:       ') + 
+      `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`
+    );
+    console.log(
+      colors.bold(' Time:        ') + `${(duration / 1000).toFixed(3)}s`
+    );
+    
   }
 }
 
