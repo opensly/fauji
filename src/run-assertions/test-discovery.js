@@ -5,7 +5,7 @@ export async function findTestFiles({ targetDir, testMatch }) {
   // Validate the targetDir is legitimate or not
   const empty = await isEmptyDir(targetDir, { ignore: [/^\./, 'node_modules'] });
   if (empty) {
-    throw new Error(`No test files found in directory: ${targetDir}`);
+    console.log(colors.bold(`\n Error: `) + `No test files found in directory: ${targetDir}`);
   }
   let files = [];
   for (const pattern of testMatch) {
