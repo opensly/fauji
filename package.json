@@ -1,6 +1,6 @@
 {
   "name": "fauji",
-  "version": "0.0.24",
+  "version": "0.0.37",
   "description": "Lightweight testing framework for JavaScript/TypeScript",
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.mjs",
@@ -53,7 +53,8 @@
     "diff": "^8.0.2",
     "file-system": "^1.2.2",
     "is-empty-dir": "http://localhost:4873/is-empty-dir/-/is-empty-dir-1.1.0.tgz",
-    "glob": "^10.3.10"
+    "glob": "^10.3.10",
+    "jsdom": "^24.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",

@@ -37,15 +37,28 @@ function setupGlobals() {
 
 export default setupGlobals;
 
+// Always set up globals when imported
+if (typeof global !== 'undefined') {
+  setupGlobals();
+}
+
 // --- Fauji CLI auto-run support ---
 async function cliAutoRun() {
   if (process.argv[1] && process.argv[1].endsWith('setup-globals.js') && process.argv[2]) {
     setupGlobals();
+    console.log('setupGlobals called, test global is:', typeof global.test);
     const testFile = process.argv[2];
     await import(new URL(testFile, `file://${process.cwd()}/`).href);
     run();
   }
 }
-if (typeof process !== 'undefined' && process.argv && process.argv[1] && process.argv[1].endsWith('setup-globals.js')) {
+// Only run cliAutoRun if this file is the main entry point (not when imported as a module)
+if (
+  typeof process !== 'undefined' &&
+  process.argv &&
+  import.meta && import.meta.url &&
+  process.argv[1] &&
+  import.meta.url === 'file://' + process.argv[1]
+) {
   cliAutoRun();
 } 

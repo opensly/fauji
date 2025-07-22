@@ -14,7 +14,6 @@ class Logger {
     this.endTime = null;
     this.lastError = null;
     this.slowThreshold = 500; // ms
-    this.progressBarLength = 40;
   }
 
   startTimer() {
@@ -49,23 +48,22 @@ class Logger {
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
-        console.log(' ' + colors.yellow('- SKIPPED'));
+        console.log('  ' + colors.yellow('- SKIPPED') + ' ' + this.currentTest.name);
       } else if (result) {
         this.passed++;
         this.currentTest.status = 'passed';
         let slow = this.currentTest.duration > this.slowThreshold;
         let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-        console.log(' ' + colors.green('✓') + slowMsg);
+        console.log('  ' + colors.green('✓') + ' ' + this.currentTest.name + slowMsg);
       } else {
         this.failed++;
         this.currentTest.status = 'failed';
         this.currentTest.error = error;
-        console.log(' ' + colors.red('✗'));
+        console.log('  ' + colors.red('✗') + ' ' + this.currentTest.name);
         this.printErrorDetails(error);
       }
       this.testResults.push(this.currentTest);
       this.currentTest = null;
-      this.printProgressBar();
     }
   }
 
@@ -111,15 +109,6 @@ class Logger {
     }
   }
 
-  printProgressBar() {
-    const done = this.passed + this.failed + this.skipped;
-    const percent = done / this.total;
-    const filled = Math.round(this.progressBarLength * percent);
-    const bar = colors.green('█'.repeat(filled)) + colors.gray('░'.repeat(this.progressBarLength - filled));
-    process.stdout.write(`\rProgress: [${bar}] ${done}/${this.total}`);
-    if (done === this.total) process.stdout.write('\n');
-  }
-
   getStats() {
     return {
       total: this.total,
@@ -144,43 +133,15 @@ class Logger {
     };
   }
 
-  getResultsHTML() {
-    const results = this.getResultsJSON();
-    const html = [];
-    html.push('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fauji Test Report</title>');
-    html.push('<style>body{font-family:sans-serif;} .passed{color:green;} .failed{color:red;} .skipped{color:orange;} .suite{font-weight:bold;} .test{margin-left:2em;} .duration{color:gray;} pre{background:#f8f8f8;padding:1em;}</style>');
-    html.push('</head><body>');
-    html.push(`<h1>Fauji Test Report</h1>`);
-    html.push(`<p><b>Total:</b> ${results.stats.total} &nbsp; <span class="passed">Passed:</span> ${results.stats.passed} &nbsp; <span class="failed">Failed:</span> ${results.stats.failed} &nbsp; <span class="skipped">Skipped:</span> ${results.stats.skipped} &nbsp; <b>Time:</b> ${(results.duration/1000).toFixed(2)}s</p>`);
-    let lastSuite = [];
-    for (const test of results.tests) {
-      let suiteDiffIdx = 0;
-      while (suiteDiffIdx < test.suite.length && lastSuite[suiteDiffIdx] === test.suite[suiteDiffIdx]) suiteDiffIdx++;
-      for (let i = suiteDiffIdx; i < test.suite.length; i++) {
-        html.push(`<div class="suite" style="margin-left:${i}em;">${test.suite[i]}</div>`);
-      }
-      lastSuite = test.suite;
-      let statusClass = test.status;
-      let slow = test.duration > this.slowThreshold;
-      let slowMsg = slow ? ' <span style="color:orange;">(SLOW)</span>' : '';
-      let ann = test.annotations && Object.keys(test.annotations).length ? `<span style='color:teal;'> ${JSON.stringify(test.annotations)}</span>` : '';
-      html.push(`<div class="test ${statusClass}" style="margin-left:${test.suite.length}em;">${test.status === 'passed' ? '✓' : test.status === 'skipped' ? '-' : '✗'} ${test.name}${ann} <span class="duration">(${test.duration}ms${slowMsg})</span></div>`);
-      if (test.status === 'failed' && test.error) {
-        html.push(`<pre>${(test.error.stack || test.error).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`);
-      }
-    }
-    html.push('</body></html>');
-    return html.join('\n');
-  }
-
   printSummary() {
     this.endTimer();
     const duration = this.endTime && this.startTime ? (this.endTime - this.startTime) : 0;
-    console.log(colors.bold('\nTest Suites: ') + `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`);
-    console.log(colors.bold('Tests:      ') + `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`);
-    console.log(colors.bold('Time:       ') + `${(duration / 1000).toFixed(2)}s`);
+    if (this.total === 0) {
+      console.log(colors.yellow('No tests found.'));
+      return;
+    }
     for (const result of this.testResults) {
-      const suitePath = result.suite.length ? result.suite.join(' > ') + ' > ' : '';
+      const suitePath = result.suite.filter(s => s !== 'root').length ? result.suite.filter(s => s !== 'root').join(' > ') + ' > ' : '';
       const statusColor = result.status === 'passed' ? colors.green : result.status === 'skipped' ? colors.yellow : colors.red;
       let slow = result.duration > this.slowThreshold;
       let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
@@ -189,6 +150,9 @@ class Logger {
         this.printErrorDetails(result.error);
       }
     }
+    console.log(colors.bold(`\n Test Suites: `) + `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`);
+    console.log(colors.bold(' Tests:       ') + `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`);
+    console.log(colors.bold(' Time:        ') + `${(duration / 1000).toFixed(2)}s`);
   }
 }
 

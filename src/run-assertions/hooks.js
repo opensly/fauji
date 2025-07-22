@@ -1,19 +1,19 @@
 // Hook registration for Fauji
-import { rootSuite } from './suite.js';
+import { rootSuite, getCurrentSuite } from './suite.js';
 import * as fakeTimers from './fake-timers';
 import * as spy from '../matchers/spy';
 
 function beforeAll(fn) {
-  rootSuite.hooks.beforeAll.push(fn);
+  getCurrentSuite().hooks.beforeAll.push(fn);
 }
 function afterAll(fn) {
-  rootSuite.hooks.afterAll.push(fn);
+  getCurrentSuite().hooks.afterAll.push(fn);
 }
 function beforeEach(fn) {
-  rootSuite.hooks.beforeEach.push(fn);
+  getCurrentSuite().hooks.beforeEach.push(fn);
 }
 function afterEach(fn) {
-  rootSuite.hooks.afterEach.push(fn);
+  getCurrentSuite().hooks.afterEach.push(fn);
 }
 
 // Instead of patching afterEach recursively, add a global afterEach that always resets timers

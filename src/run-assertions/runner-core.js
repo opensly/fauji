@@ -117,9 +117,7 @@ function run() {
     filterOnlySuites(rootSuite);
   }
   (async () => {
-    for (const suite of rootSuite.suites) {
-      await runSuite(suite);
-    }
+    await runSuite(rootSuite);
     _log.printSummary();
     if (process.env.FAUJI_REPORT || global.FAUJI_REPORT) {
       const type = process.env.FAUJI_REPORT || global.FAUJI_REPORT;

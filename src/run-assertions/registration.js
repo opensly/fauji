@@ -1,5 +1,5 @@
 // Test and suite registration for Fauji
-import { rootSuite } from './suite.js';
+import { getCurrentSuite, setCurrentSuite, Suite } from './suite.js';
 
 /**
  * Register a fixture for the current suite.

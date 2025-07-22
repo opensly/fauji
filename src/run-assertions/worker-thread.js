@@ -22,6 +22,7 @@ process.stderr.write = (chunk, ...args) => {
 };
 
 let error = null;
+let testResults = null;
 
 (async () => {
   try {
@@ -30,6 +31,10 @@ let error = null;
     // Automatically call run() if defined, to match Jest/Vitest
     if (typeof global.run === 'function') {
       global.run();
+    }
+    // After running, try to get results from the logger
+    if (global._log && typeof global._log.getResultsJSON === 'function') {
+      testResults = global._log.getResultsJSON();
     }
   } catch (e) {
     error = e.stack || e.message || String(e);
@@ -42,7 +47,8 @@ let error = null;
       stdout: capturedStdout,
       stderr: capturedStderr,
       error,
-      code
+      code,
+      testResults
     });
   });
 })(); 
