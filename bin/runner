@@ -77,10 +77,6 @@ if (!fs.existsSync(configPath)) {
 }
 let targetDir, testMatch;
 const allowedPatterns = [
-  '**.test.js', 
-  '**.spec.js', 
-  '**.test.ts', 
-  '**.spec.ts',
   '**/*.test.js', 
   '**/*.spec.js', 
   '**/*.test.ts', 
