@@ -107,21 +107,12 @@ let testResults = null;
     console.error(colors.red('Error in test file execution:'), e);
   }
 
-  // After test execution, before sending results:
+  // After test execution, before capturing output:
+  // Allow any pending writes to flush
+  await new Promise(resolve => setImmediate(resolve));
+
   capturedStdout = bufferStdout.toString();
   capturedStderr = bufferStderr.toString();
-
-  // Ensure all output is flushed before sending results
-  await new Promise(resolve => {
-    process.stdout.write('', resolve);
-  });
-  await new Promise(resolve => {
-    process.stderr.write('', resolve);
-  });
-  
-  // Additional flush to ensure all output is captured
-  process.stdout.write('');
-  process.stderr.write('');
 
   // Clean up global state before sending results
   if (global._testLogger) {
