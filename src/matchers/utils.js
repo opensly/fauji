@@ -1,7 +1,6 @@
 // Matcher utilities for Fauji
 import util from 'util';
 import deepEqualCheck from 'deep-equal-check';
-import fs from 'fs';
 
 export function isMatch(obj, partial) {
   if (typeof obj !== 'object' || obj === null || typeof partial !== 'object' || partial === null) return false;
@@ -40,7 +39,7 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
       const notText = isNot ? 'not.' : '';
       const err = new Error();
       const stackLines = (err.stack || '').split('\n');
-      let testFrame = stackLines.find(l => l.includes('.js') && !l.includes('matchers.js') && !l.includes('logger.js')) || stackLines[2] || '';
+      let testFrame = stackLines.find(l => l.includes('.js') && !l.includes('matchers.js') && !l.includes('../logger/logger-core.js')) || stackLines[2] || '';
       let location = '';
       const match = testFrame.match(/\(([^)]+)\)/) || testFrame.match(/at ([^ ]+)/);
       if (match && match[1]) {

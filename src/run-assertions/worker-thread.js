@@ -61,7 +61,7 @@ let testResults = null;
     }
     
     // Create isolated logger for this worker thread, writing to buffer only
-    const { Logger } = await import(new URL('./logger.js', import.meta.url));
+    const { Logger } = await import(new URL('../logger/logger-core.js', import.meta.url));
     const workerLogger = new Logger({ stdout: bufferStdout, stderr: bufferStderr });
     global._testLogger = workerLogger;
     

@@ -2,7 +2,7 @@ import colors from 'colors/safe';
 import os from 'os';
 import path from 'path';
 import { Worker } from 'worker_threads';
-import { Logger } from './logger.js';
+import { Logger } from '../logger/logger-core.js';
 
 export async function runTestFiles(testFiles, options = {}) {
   const globalStartTime = Date.now();

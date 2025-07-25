@@ -1,6 +1,6 @@
 // Core test runner logic for Fauji
 import { rootSuite } from './suite.js';
-import { Logger } from './logger.js';
+import { Logger } from '../logger/logger-core.js';
 import * as allMatchersModule from '../matchers/index.js';
 
 const allMatchers = allMatchersModule.allMatchers || allMatchersModule.default || allMatchersModule;

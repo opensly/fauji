@@ -1,6 +1,5 @@
 import * as colors from 'colors/safe';
-import * as diff from 'diff';
-import fs from 'fs';
+import { printErrorDetails } from './print-error-details.js';
 
 class Logger {
   constructor({ stdout = process.stdout, stderr = process.stderr } = {}) {
@@ -71,7 +70,7 @@ class Logger {
         this.currentTest.error = error;
         this.stdout.write('  ' + colors.red('✗') + ' ' + testName + '\n');
         // Print error details immediately after the test status
-        this.printErrorDetails(error);
+        printErrorDetails(error, this.stdout);
       }
       this.testResults.push(this.currentTest);
       this.currentTest = null;
@@ -81,107 +80,6 @@ class Logger {
   error(message) {
     this.lastError = message;
     this.stderr.write(colors.red(message) + '\n');
-  }
-
-  printErrorDetails(error) {
-    if (!error) return;
-    
-    // Show assertion differences more clearly
-    if (error.expected !== undefined && error.actual !== undefined) {
-      this.stdout.write(colors.red('    Difference:') + '\n');
-      this.stdout.write(colors.red('    - Expected: ') + String(error.expected) + '\n');
-      this.stdout.write(colors.green('    + Received: ') + String(error.actual) + '\n');
-      
-      // Create diff for better visualization - but only if values are actually different
-      if (String(error.expected) !== String(error.actual)) {
-        try {
-          const diffLines = diff.createPatch('difference', String(error.expected), String(error.actual)).split('\n').slice(4);
-          if (diffLines.length > 0) {
-            diffLines.forEach(line => {
-              if (line.startsWith('-')) this.stdout.write('    ' + colors.red(line) + '\n');
-              else if (line.startsWith('+')) this.stdout.write('    ' + colors.green(line) + '\n');
-              else if (line.trim()) this.stdout.write('    ' + line + '\n');
-            });
-          }
-        } catch (e) {
-          // If diff creation fails, just show the basic expected/received
-        }
-      }
-    } else if (error.message && error.message.includes('Difference:')) {
-      // Handle assertion errors that already have formatted difference in message
-      const lines = error.message.split('\n');
-      let inDiffSection = false;
-      let diffShown = false;
-      let hasShownDiff = false;
-      
-      lines.forEach(line => {
-        if (line.includes('Difference:')) {
-          if (!diffShown && !hasShownDiff) {
-            this.stdout.write(colors.red('    Difference:') + '\n');
-            diffShown = true;
-            hasShownDiff = true;
-          }
-          inDiffSection = true;
-        } else if (inDiffSection && line.trim()) {
-          if (line.startsWith('- Expected:')) {
-            this.stdout.write('    ' + line + '\n');
-          } else if (line.startsWith('+ Received:')) {
-            this.stdout.write('    ' + line + '\n');
-          } else if (line.startsWith('-') || line.startsWith('+')) {
-            this.stdout.write('    ' + line + '\n');
-          } else {
-            this.stdout.write('    ' + colors.gray(line) + '\n');
-          }
-        }
-      });
-    }
-    
-    // User-focused stack/code frame
-    if (error.stack) {
-      // Find the first stack frame that is not internal or in node_modules/fauji
-      const stackLines = error.stack.split('\n');
-      let userFrame = null;
-      for (const line of stackLines) {
-        if (
-          line.includes('.js') &&
-          !line.includes('node_modules/fauji') &&
-          !line.includes('node:internal') &&
-          !line.includes('matchers/utils') &&
-          !line.includes('run-assertions/logger')
-        ) {
-          userFrame = line;
-          break;
-        }
-      }
-      // If not found, fall back to the first non-internal frame
-      if (!userFrame) {
-        userFrame = stackLines.find(l => l.includes('.js') && !l.includes('node:internal')) || stackLines[1];
-      }
-      let location = '';
-      let file = '', lineNum = 0;
-      const match = userFrame && (userFrame.match(/\(([^)]+):(\d+):(\d+)\)/) || userFrame.match(/at ([^ ]+):(\d+):(\d+)/));
-      if (match && match[1] && match[2]) {
-        location = match[1] + ':' + match[2];
-        file = match[1];
-        lineNum = parseInt(match[2], 10);
-      }
-      if (file && lineNum) {
-        try {
-          const lines = fs.readFileSync(file, 'utf8').split('\n');
-          const start = Math.max(0, lineNum - 3);
-          const end = Math.min(lines.length, lineNum + 2);
-          this.stdout.write(colors.gray(`\n    at ${file}:${lineNum}`) + '\n');
-          for (let i = start; i < end; i++) {
-            const prefix = (i + 1 === lineNum) ? colors.bgRed.white(' > ') : '   ';
-            this.stdout.write(prefix + ' ' + (i + 1).toString().padStart(4) + ' | ' + lines[i] + '\n');
-          }
-        } catch {}
-      } else if (location) {
-        this.stdout.write(colors.gray(`\n    at ${location}`) + '\n');
-      }
-    }
-    // Add a trailing newline for spacing before the next test
-    this.stdout.write('\n');
   }
 
   getStats() {
