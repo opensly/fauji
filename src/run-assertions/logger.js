@@ -94,7 +94,7 @@ class Logger {
     
     // Show assertion differences more clearly
     if (error.expected !== undefined && error.actual !== undefined) {
-      this.stdout.write(colors.red('\n    Difference:') + '\n');
+      this.stdout.write(colors.red('    Difference:') + '\n');
       this.stdout.write(colors.red('    - Expected: ') + String(error.expected) + '\n');
       this.stdout.write(colors.green('    + Received: ') + String(error.actual) + '\n');
       
@@ -123,7 +123,7 @@ class Logger {
       lines.forEach(line => {
         if (line.includes('Difference:')) {
           if (!diffShown && !hasShownDiff) {
-            this.stdout.write(colors.red('\n    Difference:') + '\n');
+            this.stdout.write(colors.red('    Difference:') + '\n');
             diffShown = true;
             hasShownDiff = true;
           }
@@ -186,6 +186,8 @@ class Logger {
         this.stdout.write(colors.gray(`\n    at ${location}`) + '\n');
       }
     }
+    // Add a trailing newline for spacing before the next test
+    this.stdout.write('\n');
   }
 
   getStats() {
