@@ -1,4 +1,5 @@
 import { parentPort, workerData } from 'worker_threads';
+import * as colors from 'colors/safe';
 const { testFile, env } = workerData;
 
 // Set environment variables
@@ -21,6 +22,10 @@ process.stderr.write = (chunk, ...args) => {
   return origStderrWrite(chunk, ...args);
 };
 
+// Ensure proper flushing
+process.stdout.on('drain', () => {});
+process.stderr.on('drain', () => {});
+
 let error = null;
 let testResults = null;
 
@@ -30,6 +35,10 @@ let testResults = null;
     // Import setup-globals to initialize the test environment
     await import(new URL('./setup-globals.js', import.meta.url));
     
+    // Reset suite state for this worker to prevent state pollution
+    const { rootSuite, setCurrentSuite } = await import(new URL('./suite.js', import.meta.url));
+    setCurrentSuite(rootSuite);
+    
     // Import the test file
     await import(new URL(testFile, `file://${process.cwd()}/`).href);
 
@@ -38,11 +47,15 @@ let testResults = null;
       global.run();
     }
     
-    // FIX: Access the logger instance correctly
+    // Create isolated logger for this worker thread
+    const { Logger } = await import(new URL('./logger.js', import.meta.url));
+    const workerLogger = new Logger();
+    
+    // Access the logger instance correctly
     // The logger should be available via runner-core.js export
     const runnerCore = await import(new URL('./runner-core.js', import.meta.url));
     
-    // FIX: Get test results from the global logger if available
+    // Get test results from the global logger if available
     if (runnerCore && runnerCore._log) {
       const logger = runnerCore._log;
       if (!logger.endTime && logger.startTime) {
@@ -51,7 +64,6 @@ let testResults = null;
       testResults = logger.getResultsJSON();
     } else {
       // Fallback: try to get results from global scope
-      const { Logger } = await import(new URL('./logger.js', import.meta.url));
       if (global._testLogger instanceof Logger) {
         if (!global._testLogger.endTime && global._testLogger.startTime) {
           global._testLogger.endTimer();
@@ -62,13 +74,13 @@ let testResults = null;
     
     const endTime = Date.now();
     
-    // FIX: Ensure timing information is properly set
+    // Ensure timing information is properly set
     if (testResults) {
       testResults.startTime = startTime;
       testResults.endTime = endTime;
       testResults.duration = endTime - startTime;
 
-      // FIX: Ensure individual test durations are properly calculated
+      // Ensure individual test durations are properly calculated
       if (testResults.tests) {
         testResults.tests = testResults.tests.map(test => ({
           ...test,
@@ -81,6 +93,23 @@ let testResults = null;
     console.error(colors.red('Error in test file execution:'), e);
   }
 
+  // Ensure all output is flushed before sending results
+  await new Promise(resolve => {
+    process.stdout.write('', resolve);
+  });
+  await new Promise(resolve => {
+    process.stderr.write('', resolve);
+  });
+  
+  // Additional flush to ensure all output is captured
+  process.stdout.write('');
+  process.stderr.write('');
+
+  // Clean up global state before sending results
+  if (global._testLogger) {
+    delete global._testLogger;
+  }
+  
   // Send results immediately instead of waiting for process exit
   parentPort.postMessage({
     type: 'result',

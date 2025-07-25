@@ -34,10 +34,9 @@ export function formatDiff(received, expected) {
 }
 
 export function getMatcherResult(result, matcherName, received, expected, isNot = false) {
-  // Logger is only used for error reporting, so dynamic import is fine
-  import('../run-assertions/logger.js').then(({ Logger }) => {
-    const _log = new Logger();
-    if (!result) {
+  if (!result) {
+    try {
+      // Create a proper error object that can be thrown
       const notText = isNot ? 'not.' : '';
       const err = new Error();
       const stackLines = (err.stack || '').split('\n');
@@ -47,24 +46,11 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
       if (match && match[1]) {
         location = match[1];
       }
-      let codeFrame = '';
-      if (location) {
-        const [file, line, col] = location.split(/:|\//).slice(-3);
-        try {
-          const lines = fs.readFileSync(location.split(':')[0], 'utf8').split('\n');
-          const lineNum = parseInt(line, 10) - 1;
-          const start = Math.max(0, lineNum - 2);
-          const end = Math.min(lines.length, lineNum + 3);
-          codeFrame = lines.slice(start, end).map((l, i) => {
-            const n = start + i + 1;
-            return (n === lineNum + 1 ? '> ' : '  ') + n.toString().padStart(3) + ' | ' + l;
-          }).join('\n');
-        } catch {}
-      }
+      
+      // Create error message
       let message = '';
       message += `\n${location ? 'at ' + location : ''}`;
-      if (codeFrame) message += `\n${codeFrame}\n`;
-      message += `\nDifference:`;
+      message += `\n\nDifference:`;
       if (typeof expected !== 'undefined') {
         message += `\n- Expected: ${util.inspect(expected, { depth: 5, colors: false })}`;
         message += `\n+ Received: ${util.inspect(received, { depth: 5, colors: false })}`;
@@ -76,15 +62,24 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
         message += formatDiff(received, expected);
       }
       message += '\n';
-      if (_log.error) {
-        _log.error(message);
-      } else {
-        console.error(message);
-      }
-    } else {
-      _log.status(result);
+      
+      // Create error object with expected/actual properties for better diff display
+      const assertionError = new Error(message);
+      assertionError.expected = expected;
+      assertionError.actual = received;
+      assertionError.matcherName = matcherName;
+      assertionError.isNot = isNot;
+      
+      // Throw the error so the test runner can catch it
+      throw assertionError;
+    } catch (error) {
+      // If error creation fails, throw a simple assertion error
+      const simpleError = new Error(`Assertion failed: ${matcherName}`);
+      simpleError.expected = expected;
+      simpleError.actual = received;
+      throw simpleError;
     }
-  });
+  }
   return result;
 }
 

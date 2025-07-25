@@ -94,10 +94,10 @@ async function runSuite(suite) {
       if (maybePromise && typeof maybePromise.then === 'function') {
         await maybePromise;
       }
-      // FIX: Test passed, mark as successful
+      // Test passed, mark as successful
       _log.status(true);
     } catch (e) {
-      // FIX: Test failed, mark as failed with error
+      // Test failed, mark as failed with error
       _log.status(false, e);
     }
     
@@ -125,7 +125,7 @@ async function runSuite(suite) {
 
 /**
  * Runs all root-level suites, applies 'only' filtering.
- * FIX: Remove individual file summary printing - this will be handled by test-execution.js
+ * Summary printing is handled by test-execution.js
  */
 function run() {
   _log.startTimer();
@@ -134,8 +134,7 @@ function run() {
   }
   (async () => {
     await runSuite(rootSuite);
-    // FIX: Don't print summary here - let test-execution.js handle it
-    // FIX: Don't set process.exitCode here - let test-execution.js handle it
+    // Summary and exit code are handled by test-execution.js
   })();
 }
 
