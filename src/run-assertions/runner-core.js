@@ -5,12 +5,10 @@ import * as allMatchersModule from '../matchers/index.js';
 
 const allMatchers = allMatchersModule.allMatchers || allMatchersModule.default || allMatchersModule;
 
-// FIX: Create a global logger instance that can be accessed by worker threads
-export const _log = new Logger();
-
-// FIX: Also make it available on global scope for worker thread access
-if (typeof global !== 'undefined') {
-  global._testLogger = _log;
+// Use a getter to always get the correct logger instance
+const defaultLogger = new Logger();
+function getLogger() {
+  return (typeof global !== 'undefined' && global._testLogger) ? global._testLogger : defaultLogger;
 }
 
 /**
@@ -72,14 +70,14 @@ async function resolveFixtures(test, suite) {
  */
 async function runSuite(suite) {
   if (suite.mode === 'skip') return;
-  _log.perceive('describe', suite.desc, suite.annotations);
+  getLogger().perceive('describe', suite.desc, suite.annotations);
   
   for (const fn of suite.hooks.beforeAll) await fn();
   
   for (const test of suite.tests) {
     if (test.mode === 'skip') {
-      _log.perceive('test', test.desc + ' (skipped)', test.annotations);
-      _log.status(true, null, true); // Mark as skipped
+      getLogger().perceive('test', test.desc + ' (skipped)', test.annotations);
+      getLogger().status(true, null, true); // Mark as skipped
       continue;
     }
     
@@ -87,7 +85,7 @@ async function runSuite(suite) {
     let teardowns = [];
     
     try {
-      _log.perceive('test', test.desc, test.annotations);
+      getLogger().perceive('test', test.desc, test.annotations);
       const { resolved, teardowns: tds } = await resolveFixtures(test, suite);
       teardowns = tds;
       const maybePromise = test.fn(...resolved);
@@ -95,10 +93,10 @@ async function runSuite(suite) {
         await maybePromise;
       }
       // Test passed, mark as successful
-      _log.status(true);
+      getLogger().status(true);
     } catch (e) {
       // Test failed, mark as failed with error
-      _log.status(false, e);
+      getLogger().status(false, e);
     }
     
     // Run teardowns after test
@@ -120,7 +118,7 @@ async function runSuite(suite) {
   }
   
   for (const fn of suite.hooks.afterAll) await fn();
-  _log.suiteStack.pop();
+  getLogger().suiteStack.pop();
 }
 
 /**
@@ -128,11 +126,11 @@ async function runSuite(suite) {
  * Summary printing is handled by test-execution.js
  */
 function run() {
-  _log.startTimer();
+  getLogger().startTimer();
   if (hasOnly(rootSuite)) {
     filterOnlySuites(rootSuite);
   }
-  (async () => {
+  return (async () => {
     await runSuite(rootSuite);
     // Summary and exit code are handled by test-execution.js
   })();

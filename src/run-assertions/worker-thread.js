@@ -52,39 +52,24 @@ let testResults = null;
     const { rootSuite, setCurrentSuite } = await import(new URL('./suite.js', import.meta.url));
     setCurrentSuite(rootSuite);
     
-    // Import the test file
-    await import(new URL(testFile, `file://${process.cwd()}/`).href);
-
-    // Run the tests if the run function is available
-    if (typeof global.run === 'function') {
-      global.run();
-    }
     
-    // Create isolated logger for this worker thread, writing to buffer only
     const { Logger } = await import(new URL('../logger/logger-core.js', import.meta.url));
     const workerLogger = new Logger({ stdout: bufferStdout, stderr: bufferStderr });
     global._testLogger = workerLogger;
     
-    // Access the logger instance correctly
-    // The logger should be available via runner-core.js export
-    const runnerCore = await import(new URL('./runner-core.js', import.meta.url));
-    
-    // Get test results from the global logger if available
-    if (runnerCore && runnerCore._log) {
-      const logger = runnerCore._log;
-      if (!logger.endTime && logger.startTime) {
-        logger.endTimer();
-      }
-      testResults = logger.getResultsJSON();
-    } else {
-      // Fallback: try to get results from global scope
-      if (global._testLogger instanceof Logger) {
-        if (!global._testLogger.endTime && global._testLogger.startTime) {
-          global._testLogger.endTimer();
-        }
-        testResults = global._testLogger.getResultsJSON();
-      }
+    // Import the test file (which will register tests)
+    await import(new URL(testFile, `file://${process.cwd()}/`).href);
+
+    // Run the tests if the run function is available
+    if (typeof global.run === 'function') {
+      await global.run();
     }
+    
+    // Get test results from the logger we just set
+    if (!workerLogger.endTime && workerLogger.startTime) {
+      workerLogger.endTimer();
+    }
+    testResults = workerLogger.getResultsJSON();
     
     const endTime = Date.now();
     
@@ -93,8 +78,7 @@ let testResults = null;
       testResults.startTime = startTime;
       testResults.endTime = endTime;
       testResults.duration = endTime - startTime;
-
-      // Ensure individual test durations are properly calculated
+      
       if (testResults.tests) {
         testResults.tests = testResults.tests.map(test => ({
           ...test,

@@ -124,11 +124,10 @@ class Logger {
     const totalSuites = this.totalSuites || this.total;
     const passedSuites = this.passedSuites || this.passed;
     const failedSuites = this.failedSuites || this.failed;
-    const skippedSuites = this.skippedSuites || this.skipped;
     
     this.stdout.write(
       colors.bold(' Test Suites: ') + 
-      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green(passedSuites + ' passed')} | ${colors.yellow(skippedSuites + ' skipped')} | ${totalSuites} total` + '\n'
+      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green(passedSuites + ' passed')} | ${totalSuites} total` + '\n'
     );
     this.stdout.write(
       colors.bold(' Tests:       ') + 
