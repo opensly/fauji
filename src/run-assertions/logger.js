@@ -3,7 +3,7 @@ import * as diff from 'diff';
 import fs from 'fs';
 
 class Logger {
-  constructor() {
+  constructor({ stdout = process.stdout, stderr = process.stderr } = {}) {
     this.total = 0;
     this.passed = 0;
     this.failed = 0;
@@ -14,6 +14,8 @@ class Logger {
     this.endTime = null;
     this.lastError = null;
     this.slowThreshold = 500; // ms
+    this.stdout = stdout;
+    this.stderr = stderr;
   }
 
   startTimer() {
@@ -26,9 +28,11 @@ class Logger {
 
   perceive(context, msg, annotations) {
     if (context === 'describe') {
+      // Suppress printing of the 'root' suite
+      if (msg === 'root') return;
       this.suiteStack.push(msg);
       let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
-      console.log(colors.bold('\n' + msg) + ann);
+      this.stdout.write(colors.bold('\n' + msg) + ann + '\n');
     } else if (context === 'test') {
       const startTime = Date.now();
       this.currentTest = { 
@@ -44,7 +48,7 @@ class Logger {
         this.currentTest.annotations = annotations;
       }
       let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
-      process.stdout.write('  ' + msg + ann);
+      this.stdout.write('  ' + msg + ann);
     }
   }
 
@@ -59,23 +63,22 @@ class Logger {
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
-        console.log('  ' + colors.yellow('- SKIPPED'));
+        this.stdout.write('  ' + colors.yellow('- SKIPPED') + '\n');
       } else if (result) {
         this.passed++;
         this.currentTest.status = 'passed';
         let slow = this.currentTest.duration > this.slowThreshold;
         let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-        console.log('  ' + colors.green('✓') + slowMsg);
+        this.stdout.write('  ' + colors.green('✓') + slowMsg + '\n');
       } else {
         // When result is false (test failed), mark as failed
         this.failed++;
         this.currentTest.status = 'failed';
         this.currentTest.error = error;
-        console.log('  ' + colors.red('✗'));
+        this.stdout.write('  ' + colors.red('✗') + '\n');
         // Print error details immediately after the test status
         this.printErrorDetails(error);
       }
-      
       this.testResults.push(this.currentTest);
       this.currentTest = null;
     }
@@ -83,7 +86,7 @@ class Logger {
 
   error(message) {
     this.lastError = message;
-    console.error(colors.red(message));
+    this.stderr.write(colors.red(message) + '\n');
   }
 
   printErrorDetails(error) {
@@ -91,9 +94,9 @@ class Logger {
     
     // Show assertion differences more clearly
     if (error.expected !== undefined && error.actual !== undefined) {
-      console.error(colors.red('\n    Difference:'));
-      console.error(colors.red('    - Expected: ') + String(error.expected));
-      console.error(colors.green('    + Received: ') + String(error.actual));
+      this.stdout.write(colors.red('\n    Difference:') + '\n');
+      this.stdout.write(colors.red('    - Expected: ') + String(error.expected) + '\n');
+      this.stdout.write(colors.green('    + Received: ') + String(error.actual) + '\n');
       
       // Create diff for better visualization - but only if values are actually different
       if (String(error.expected) !== String(error.actual)) {
@@ -101,9 +104,9 @@ class Logger {
           const diffLines = diff.createPatch('difference', String(error.expected), String(error.actual)).split('\n').slice(4);
           if (diffLines.length > 0) {
             diffLines.forEach(line => {
-              if (line.startsWith('-')) console.error('    ' + colors.red(line));
-              else if (line.startsWith('+')) console.error('    ' + colors.green(line));
-              else if (line.trim()) console.error('    ' + line);
+              if (line.startsWith('-')) this.stdout.write('    ' + colors.red(line) + '\n');
+              else if (line.startsWith('+')) this.stdout.write('    ' + colors.green(line) + '\n');
+              else if (line.trim()) this.stdout.write('    ' + line + '\n');
             });
           }
         } catch (e) {
@@ -120,20 +123,20 @@ class Logger {
       lines.forEach(line => {
         if (line.includes('Difference:')) {
           if (!diffShown && !hasShownDiff) {
-            console.error(colors.red('\n    Difference:'));
+            this.stdout.write(colors.red('\n    Difference:') + '\n');
             diffShown = true;
             hasShownDiff = true;
           }
           inDiffSection = true;
         } else if (inDiffSection && line.trim()) {
           if (line.startsWith('- Expected:')) {
-            console.error(colors.red('    ' + line));
+            this.stdout.write('    ' + line + '\n');
           } else if (line.startsWith('+ Received:')) {
-            console.error(colors.green('    ' + line));
+            this.stdout.write('    ' + line + '\n');
           } else if (line.startsWith('-') || line.startsWith('+')) {
-            console.error('    ' + line);
+            this.stdout.write('    ' + line + '\n');
           } else {
-            console.error('    ' + colors.gray(line));
+            this.stdout.write('    ' + colors.gray(line) + '\n');
           }
         }
       });
@@ -173,14 +176,14 @@ class Logger {
           const lines = fs.readFileSync(file, 'utf8').split('\n');
           const start = Math.max(0, lineNum - 3);
           const end = Math.min(lines.length, lineNum + 2);
-          console.error(colors.gray(`\n    at ${file}:${lineNum}`));
+          this.stdout.write(colors.gray(`\n    at ${file}:${lineNum}`) + '\n');
           for (let i = start; i < end; i++) {
             const prefix = (i + 1 === lineNum) ? colors.bgRed.white(' > ') : '   ';
-            console.error(prefix + ' ' + (i + 1).toString().padStart(4) + ' | ' + lines[i]);
+            this.stdout.write(prefix + ' ' + (i + 1).toString().padStart(4) + ' | ' + lines[i] + '\n');
           }
         } catch {}
       } else if (location) {
-        console.error(colors.gray(`\n    at ${location}`));
+        this.stdout.write(colors.gray(`\n    at ${location}`) + '\n');
       }
     }
   }
@@ -223,7 +226,7 @@ class Logger {
       return;
     }
     
-    console.log(colors.bold('\n=== Test Results Summary ==='));
+    this.stdout.write(colors.bold('\n=== Test Results Summary ===') + '\n');
     
     // Use suite counts if available (from test-execution.js), otherwise fall back to test counts
     const totalSuites = this.totalSuites || this.total;
@@ -231,16 +234,16 @@ class Logger {
     const failedSuites = this.failedSuites || this.failed;
     const skippedSuites = this.skippedSuites || this.skipped;
     
-    console.log(
+    this.stdout.write(
       colors.bold(' Test Suites: ') + 
-      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green('all passed')} | ${totalSuites} total | ${colors.yellow(skippedSuites + ' skipped')}`
+      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green('all passed')} | ${totalSuites} total | ${colors.yellow(skippedSuites + ' skipped')}` + '\n'
     );
-    console.log(
+    this.stdout.write(
       colors.bold(' Tests:       ') + 
-      `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total`
+      `${colors.green(this.passed + ' passed')}, ${colors.red(this.failed + ' failed')}, ${colors.yellow(this.skipped + ' skipped')}, ${this.total} total` + '\n'
     );
-    console.log(
-      colors.bold(' Time:        ') + `${(duration / 1000).toFixed(3)}s`
+    this.stdout.write(
+      colors.bold(' Time:        ') + `${(duration / 1000).toFixed(3)}s` + '\n'
     );
   }
 }
