@@ -31,8 +31,7 @@ class Logger {
       // Suppress printing of the 'root' suite
       if (msg === 'root') return;
       this.suiteStack.push(msg);
-      let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
-      this.stdout.write(colors.bold('\n' + msg) + ann + '\n');
+      this.stdout.write(colors.bold('\n' + msg) + '\n');
     } else if (context === 'test') {
       const startTime = Date.now();
       this.currentTest = { 
@@ -44,11 +43,6 @@ class Logger {
         skipped: false,
         startTime: startTime
       };
-      if (annotations && Object.keys(annotations).length) {
-        this.currentTest.annotations = annotations;
-      }
-      let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
-      this.stdout.write('  ' + msg + ann);
     }
   }
 
@@ -59,23 +53,23 @@ class Logger {
       this.currentTest.endTime = endTime;
       this.currentTest.duration = endTime - this.currentTest.startTime;
       this.currentTest.skipped = skipped;
-      
+      const testName = this.currentTest.name;
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
-        this.stdout.write('  ' + colors.yellow('- SKIPPED') + '\n');
+        this.stdout.write('  ' + colors.yellow('- SKIPPED') + ' ' + testName + '\n');
       } else if (result) {
         this.passed++;
         this.currentTest.status = 'passed';
         let slow = this.currentTest.duration > this.slowThreshold;
         let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-        this.stdout.write('  ' + colors.green('✓') + slowMsg + '\n');
+        this.stdout.write('  ' + colors.green('✓') + ' ' + testName + slowMsg + '\n');
       } else {
         // When result is false (test failed), mark as failed
         this.failed++;
         this.currentTest.status = 'failed';
         this.currentTest.error = error;
-        this.stdout.write('  ' + colors.red('✗') + '\n');
+        this.stdout.write('  ' + colors.red('✗') + ' ' + testName + '\n');
         // Print error details immediately after the test status
         this.printErrorDetails(error);
       }
@@ -228,8 +222,6 @@ class Logger {
       return;
     }
     
-    this.stdout.write(colors.bold('\n=== Test Results Summary ===') + '\n');
-    
     // Use suite counts if available (from test-execution.js), otherwise fall back to test counts
     const totalSuites = this.totalSuites || this.total;
     const passedSuites = this.passedSuites || this.passed;
@@ -238,7 +230,7 @@ class Logger {
     
     this.stdout.write(
       colors.bold(' Test Suites: ') + 
-      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green('all passed')} | ${totalSuites} total | ${colors.yellow(skippedSuites + ' skipped')}` + '\n'
+      `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green(passedSuites + ' passed')} | ${colors.yellow(skippedSuites + ' skipped')} | ${totalSuites} total` + '\n'
     );
     this.stdout.write(
       colors.bold(' Tests:       ') + 

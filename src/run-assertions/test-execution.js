@@ -26,7 +26,6 @@ export async function runTestFiles(testFiles, options = {}) {
     function runNext() {
       if (idx >= testFiles.length) return;
       const file = testFiles[idx++];
-      console.log(colors.gray(`Starting worker for: ${path.basename(file)}`));
       running++;
       const env = { ...process.env };
       if (options.report) env.FAUJI_REPORT = options.report;
@@ -68,9 +67,6 @@ export async function runTestFiles(testFiles, options = {}) {
           completed++;
           running--;
           results.push({ file, error: msg.error, testResults: msg.testResults });
-          
-          // Synchronous completion message to prevent race conditions
-          console.log(colors.gray(`Completed worker for: ${path.basename(file)}`));
 
           if (completed === testFiles.length && !finished) {
             finished = true;
