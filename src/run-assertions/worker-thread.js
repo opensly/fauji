@@ -27,21 +27,43 @@ let testResults = null;
 (async () => {
   const startTime = Date.now();
   try {
+    // Import setup-globals to initialize the test environment
     await import(new URL('./setup-globals.js', import.meta.url));
+    
+    // Import the test file
     await import(new URL(testFile, `file://${process.cwd()}/`).href);
 
+    // Run the tests if the run function is available
     if (typeof global.run === 'function') {
       global.run();
     }
     
-    if (global._log && typeof global._log.getResultsJSON === 'function') {
-      // FIX: Call endTimer before getting results to ensure duration is calculated
-      global._log.endTimer();
-      
-      testResults = global._log.getResultsJSON();
-      const endTime = Date.now();
-      
-      // Set the timing info
+    // FIX: Access the logger instance correctly
+    // The logger should be available via runner-core.js export
+    const runnerCore = await import(new URL('./runner-core.js', import.meta.url));
+    
+    // FIX: Get test results from the global logger if available
+    if (runnerCore && runnerCore._log) {
+      const logger = runnerCore._log;
+      if (!logger.endTime && logger.startTime) {
+        logger.endTimer();
+      }
+      testResults = logger.getResultsJSON();
+    } else {
+      // Fallback: try to get results from global scope
+      const { Logger } = await import(new URL('./logger.js', import.meta.url));
+      if (global._testLogger instanceof Logger) {
+        if (!global._testLogger.endTime && global._testLogger.startTime) {
+          global._testLogger.endTimer();
+        }
+        testResults = global._testLogger.getResultsJSON();
+      }
+    }
+    
+    const endTime = Date.now();
+    
+    // FIX: Ensure timing information is properly set
+    if (testResults) {
       testResults.startTime = startTime;
       testResults.endTime = endTime;
       testResults.duration = endTime - startTime;
@@ -50,24 +72,22 @@ let testResults = null;
       if (testResults.tests) {
         testResults.tests = testResults.tests.map(test => ({
           ...test,
-          // Use existing duration if available, otherwise calculate from start/end times
           duration: test.duration || (test.endTime && test.startTime ? test.endTime - test.startTime : 0)
         }));
       }
     }
   } catch (e) {
     error = e.stack || e.message || String(e);
+    console.error(colors.red('Error in test file execution:'), e);
   }
 
-  // Wait for process exit to send results
-  process.on('exit', (code) => {
-    parentPort.postMessage({
-      type: 'result',
-      stdout: capturedStdout,
-      stderr: capturedStderr,
-      error,
-      code,
-      testResults
-    });
+  // Send results immediately instead of waiting for process exit
+  parentPort.postMessage({
+    type: 'result',
+    stdout: capturedStdout,
+    stderr: capturedStderr,
+    error,
+    code: error ? 1 : 0,
+    testResults
   });
 })();

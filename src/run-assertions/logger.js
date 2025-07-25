@@ -30,7 +30,6 @@ class Logger {
       let ann = annotations && Object.keys(annotations).length ? ' ' + colors.cyan(JSON.stringify(annotations)) : '';
       console.log(colors.bold('\n' + msg) + ann);
     } else if (context === 'test') {
-      // FIX: Capture start time properly
       const startTime = Date.now();
       this.currentTest = { 
         name: msg, 
@@ -39,7 +38,7 @@ class Logger {
         error: null, 
         duration: 0, 
         skipped: false,
-        startTime: startTime  // Store the start time
+        startTime: startTime
       };
       if (annotations && Object.keys(annotations).length) {
         this.currentTest.annotations = annotations;
@@ -52,7 +51,6 @@ class Logger {
   status(result, error = null, skipped = false) {
     this.total++;
     if (this.currentTest) {
-      // FIX: Calculate duration properly using stored start time
       const endTime = Date.now();
       this.currentTest.endTime = endTime;
       this.currentTest.duration = endTime - this.currentTest.startTime;
@@ -61,20 +59,23 @@ class Logger {
       if (skipped) {
         this.skipped++;
         this.currentTest.status = 'skipped';
-        console.log('  ' + colors.yellow('- SKIPPED') + ' ' + this.currentTest.name);
+        console.log('  ' + colors.yellow('- SKIPPED'));
       } else if (result) {
         this.passed++;
         this.currentTest.status = 'passed';
         let slow = this.currentTest.duration > this.slowThreshold;
         let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-        console.log('  ' + colors.green('✓') + ' ' + this.currentTest.name + slowMsg);
+        console.log('  ' + colors.green('✓') + slowMsg);
       } else {
+        // FIX: This is the key fix - when result is false (test failed), mark as failed
         this.failed++;
         this.currentTest.status = 'failed';
         this.currentTest.error = error;
-        console.log('  ' + colors.red('✗') + ' ' + this.currentTest.name);
+        console.log('  ' + colors.red('✗'));
+        // FIX: Print error details immediately after the test status
         this.printErrorDetails(error);
       }
+      
       this.testResults.push(this.currentTest);
       this.currentTest = null;
     }
@@ -87,17 +88,24 @@ class Logger {
 
   printErrorDetails(error) {
     if (!error) return;
+    
+    // FIX: Show assertion differences more clearly
     if (error.expected !== undefined && error.actual !== undefined) {
-      // Assertion diff
+      console.error(colors.red('\n    Difference:'));
+      console.error(colors.red('    - Expected: ') + String(error.expected));
+      console.error(colors.green('    + Received: ') + String(error.actual));
+      
+      // Create diff for better visualization
       const diffLines = diff.createPatch('difference', String(error.expected), String(error.actual)).split('\n').slice(4);
-      console.error(colors.red('--- Expected'));
-      console.error(colors.green('+++ Received'));
-      diffLines.forEach(line => {
-        if (line.startsWith('-')) console.error(colors.red(line));
-        else if (line.startsWith('+')) console.error(colors.green(line));
-        else console.error(line);
-      });
+      if (diffLines.length > 0) {
+        diffLines.forEach(line => {
+          if (line.startsWith('-')) console.error('    ' + colors.red(line));
+          else if (line.startsWith('+')) console.error('    ' + colors.green(line));
+          else if (line.trim()) console.error('    ' + line);
+        });
+      }
     }
+    
     // Code frame
     if (error.stack) {
       const match = error.stack.match(/\(([^)]+):(\d+):(\d+)\)/);
@@ -107,18 +115,22 @@ class Logger {
           const lines = fs.readFileSync(file, 'utf8').split('\n');
           const start = Math.max(0, line - 3);
           const end = Math.min(lines.length, line + 2);
+          console.error(colors.gray('\n    Code:'));
           for (let i = start; i < end; i++) {
-            const prefix = (i + 1 === line) ? colors.bgRed.white('>') : ' ';
+            const prefix = (i + 1 === line) ? colors.bgRed.white(' > ') : '   ';
             console.error(prefix + ' ' + (i + 1).toString().padStart(4) + ' | ' + lines[i]);
           }
         } catch {}
       }
     }
-    // Stack trace
+    
+    // Stack trace (simplified)
     if (error.stack) {
-      console.error(colors.gray(error.stack));
-    } else {
-      console.error(colors.red(error.toString()));
+      const stackLines = error.stack.split('\n').slice(1, 4); // Show only first few lines
+      console.error(colors.gray('\n    Stack:'));
+      stackLines.forEach(line => {
+        if (line.trim()) console.error('    ' + colors.gray(line.trim()));
+      });
     }
   }
 
@@ -148,44 +160,25 @@ class Logger {
     };
   }
 
+  // FIX: Remove individual test file summaries - this will be handled by test-execution.js
   printSummary() {
-    // FIX: Ensure endTimer is called if not already
+    // This method is now only called from test-execution.js for the final summary
     if (!this.endTime && this.startTime) {
       this.endTimer();
     }
     
     const duration = this.endTime && this.startTime ? (this.endTime - this.startTime) : 0;
+    
     if (this.testResults.length === 0) {
-      console.log(colors.yellow('No tests found.'));
-      return;
+      return; // Don't print "No tests found" here - let test-execution handle it
     }
     
-    for (const result of this.testResults) {
-      const suitePath = result.suite.filter(s => s !== 'root').length 
-        ? result.suite.filter(s => s !== 'root').join(' > ') + ' > ' 
-        : '';
-      const statusColor = result.status === 'passed' ? colors.green : result.status === 'skipped' ? colors.yellow : colors.red;
-      let slow = result.duration > this.slowThreshold;
-      let slowMsg = slow ? colors.yellow(' (SLOW)') : '';
-      
-      console.log(
-        '  ' + 
-        statusColor(result.status.toUpperCase()) + 
-        ' ' + 
-        suitePath + 
-        result.name + 
-        colors.gray(` (${result.duration}ms)`) + 
-        slowMsg
-      );
-
-      if (result.status === 'failed' && result.error) {
-        this.printErrorDetails(result.error);
-      }
-    }
+    // FIX: Print a consolidated summary without individual test details
+    console.log(colors.bold('\n=== Test Results Summary ==='));
     
     console.log(
-      colors.bold(`\n Test Suites: `) + 
-      `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green(this.passed + ' passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`
+      colors.bold(' Test Suites: ') + 
+      `${this.failed > 0 ? colors.red(this.failed + ' failed') : colors.green('all passed')} | ${this.total} total | ${colors.yellow(this.skipped + ' skipped')}`
     );
     console.log(
       colors.bold(' Tests:       ') + 

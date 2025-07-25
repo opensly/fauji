@@ -9,14 +9,17 @@ export async function runTestFiles(testFiles, options = {}) {
     console.log(colors.yellow('No test scripts found.'));
     process.exit(0);
   }
+  
   const maxWorkers = typeof options.parallel === 'number' ? options.parallel : os.cpus().length;
   let completed = 0;
-  let failed = 0;
   let running = 0;
   let idx = 0;
   const results = [];
   const allTestResults = [];
   let finished = false;
+  let hasFailures = false;
+
+  console.log(colors.bold(`\n🚀 Running ${testFiles.length} test file(s) with ${maxWorkers} worker(s)...\n`));
 
   return new Promise((resolve) => {
     function runNext() {
@@ -25,80 +28,112 @@ export async function runTestFiles(testFiles, options = {}) {
       running++;
       const env = { ...process.env };
       if (options.report) env.FAUJI_REPORT = options.report;
+      
       // Determine the correct extension for the worker file
       const currentExt = import.meta.url.split('.').pop();
       const workerExt = currentExt === 'cjs' ? '.cjs' : '.mjs';
       const worker = new Worker(new URL(`./worker-thread${workerExt}`, import.meta.url), {
         workerData: { testFile: file, env }
       });
+      
       worker.on('message', (msg) => {
         if (finished) return;
         if (msg.type === 'result') {
-          // Aggregate test results from all workers
-          if (msg.testResults) allTestResults.push(msg.testResults);
-          if (msg.error) {
-            failed++;
+          // FIX: Track failures properly
+          if (msg.error || (msg.testResults && msg.testResults.stats && msg.testResults.stats.failed > 0)) {
+            hasFailures = true;
           }
+          
+          // FIX: Aggregate test results from all workers
+          if (msg.testResults && msg.testResults.tests) {
+            allTestResults.push(...msg.testResults.tests);
+          }
+          
           completed++;
           running--;
-          results.push({ file, error: msg.error });
+          results.push({ file, error: msg.error, testResults: msg.testResults });
 
           if (completed === testFiles.length && !finished) {
             finished = true;
-            const logger = new Logger();
-            logger.startTime = globalStartTime;
-            logger.endTime = Date.now();
             
-            // Aggregate test results
-            for (const tr of allTestResults) {
-              if (tr && tr.tests) {
-                logger.testResults.push(...tr.tests);
-                logger.passed += tr.stats.passed;
-                logger.failed += tr.stats.failed;
-                logger.skipped += tr.stats.skipped;
-                logger.total += tr.stats.total;
+            // FIX: Create a consolidated logger with all results
+            const consolidatedLogger = new Logger();
+            consolidatedLogger.startTime = globalStartTime;
+            consolidatedLogger.endTime = Date.now();
+            
+            // FIX: Aggregate all test results properly
+            let totalPassed = 0;
+            let totalFailed = 0;
+            let totalSkipped = 0;
+            let totalTests = 0;
+            
+            for (const result of results) {
+              if (result.testResults && result.testResults.stats) {
+                totalPassed += result.testResults.stats.passed || 0;
+                totalFailed += result.testResults.stats.failed || 0;
+                totalSkipped += result.testResults.stats.skipped || 0;
+                totalTests += result.testResults.stats.total || 0;
               }
             }
             
+            // Set the aggregated stats
+            consolidatedLogger.passed = totalPassed;
+            consolidatedLogger.failed = totalFailed;
+            consolidatedLogger.skipped = totalSkipped;
+            consolidatedLogger.total = totalTests;
+            consolidatedLogger.testResults = allTestResults;
             
-            if (logger.testResults.length > 0) {
-              logger.printSummary();
-              if (failed > 0) {
-                console.log(colors.red(`\n${failed} test file(s) failed.`));
+            // FIX: Only show summary if we have test results
+            if (allTestResults.length > 0) {
+              consolidatedLogger.printSummary();
+              
+              // FIX: Show appropriate final message
+              if (hasFailures || totalFailed > 0) {
+                console.log(colors.red(`\n❌ ${totalFailed} test(s) failed across ${testFiles.length} file(s).`));
+                process.exit(1);
               } else {
-                console.log(colors.green('\nAll test files passed.'));
+                console.log(colors.green(`\n✅ All ${totalTests} test(s) passed across ${testFiles.length} file(s).`));
+                process.exit(0);
               }
             } else {
-              console.log(colors.yellow('No test results to display.'));
+              console.log(colors.yellow('\n⚠️  No tests were executed.'));
+              process.exit(0);
             }
+            
             resolve(results);
-            process.exit(failed > 0 ? 1 : 0);
           } else {
             runNext();
           }
         }
       });
+      
       worker.on('error', (err) => {
         if (finished) return;
-        console.log(colors.red('Worker thread error: ' + err.message));
-        failed++;
+        console.log(colors.red('❌ Worker thread error: ' + err.message));
+        hasFailures = true;
         completed++;
         running--;
         results.push({ file, error: err.message });
+        
         if (completed === testFiles.length && !finished) {
           finished = true;
-          resolve(results);
+          console.log(colors.red('\n❌ Test execution failed due to worker errors.'));
+          process.exit(1);
         } else {
           runNext();
         }
       });
+      
       worker.on('exit', (code) => {
         if (finished) return;
         if (code !== 0) {
-          console.log(colors.red(`Worker stopped with exit code ${code}`));
+          console.log(colors.red(`❌ Worker stopped with exit code ${code}`));
+          hasFailures = true;
         }
       });
     }
+    
+    // Start initial workers
     for (let i = 0; i < Math.min(maxWorkers, testFiles.length); i++) {
       runNext();
     }

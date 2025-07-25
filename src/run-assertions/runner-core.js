@@ -4,7 +4,14 @@ import { Logger } from './logger.js';
 import * as allMatchersModule from '../matchers/index.js';
 
 const allMatchers = allMatchersModule.allMatchers || allMatchersModule.default || allMatchersModule;
-const _log = new Logger();
+
+// FIX: Create a global logger instance that can be accessed by worker threads
+export const _log = new Logger();
+
+// FIX: Also make it available on global scope for worker thread access
+if (typeof global !== 'undefined') {
+  global._testLogger = _log;
+}
 
 /**
  * Recursively filters the suite tree to only include suites/tests marked as 'only'.
@@ -66,15 +73,19 @@ async function resolveFixtures(test, suite) {
 async function runSuite(suite) {
   if (suite.mode === 'skip') return;
   _log.perceive('describe', suite.desc, suite.annotations);
+  
   for (const fn of suite.hooks.beforeAll) await fn();
+  
   for (const test of suite.tests) {
     if (test.mode === 'skip') {
       _log.perceive('test', test.desc + ' (skipped)', test.annotations);
       _log.status(true, null, true); // Mark as skipped
       continue;
     }
+    
     for (const fn of suite.hooks.beforeEach) await fn();
     let teardowns = [];
+    
     try {
       _log.perceive('test', test.desc, test.annotations);
       const { resolved, teardowns: tds } = await resolveFixtures(test, suite);
@@ -83,10 +94,13 @@ async function runSuite(suite) {
       if (maybePromise && typeof maybePromise.then === 'function') {
         await maybePromise;
       }
+      // FIX: Test passed, mark as successful
       _log.status(true);
     } catch (e) {
+      // FIX: Test failed, mark as failed with error
       _log.status(false, e);
     }
+    
     // Run teardowns after test
     for (const td of teardowns) {
       try {
@@ -100,16 +114,18 @@ async function runSuite(suite) {
     }
     for (const fn of suite.hooks.afterEach) await fn();
   }
+  
   for (const child of suite.suites) {
     await runSuite(child);
   }
+  
   for (const fn of suite.hooks.afterAll) await fn();
   _log.suiteStack.pop();
 }
 
 /**
- * Runs all root-level suites, applies 'only' filtering, and prints summary.
- * Handles report file output and sets process exit code on failure.
+ * Runs all root-level suites, applies 'only' filtering.
+ * FIX: Remove individual file summary printing - this will be handled by test-execution.js
  */
 function run() {
   _log.startTimer();
@@ -118,10 +134,8 @@ function run() {
   }
   (async () => {
     await runSuite(rootSuite);
-    _log.printSummary();
-    if (_log.failed > 0) {
-      process.exitCode = 1;
-    }
+    // FIX: Don't print summary here - let test-execution.js handle it
+    // FIX: Don't set process.exitCode here - let test-execution.js handle it
   })();
 }
 
@@ -134,4 +148,4 @@ function expect(exp) {
   return allMatchers(exp);
 }
 
-export { run, expect, runSuite, filterOnlySuites, hasOnly }; 
+export { run, expect, runSuite, filterOnlySuites, hasOnly };
