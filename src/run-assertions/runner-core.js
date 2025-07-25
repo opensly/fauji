@@ -119,17 +119,6 @@ function run() {
   (async () => {
     await runSuite(rootSuite);
     _log.printSummary();
-    if (process.env.FAUJI_REPORT || global.FAUJI_REPORT) {
-      const type = process.env.FAUJI_REPORT || global.FAUJI_REPORT;
-      const fs = await import('fs');
-      if (type === 'html') {
-        fs.writeFileSync('fauji-report.html', _log.getResultsHTML(), 'utf8');
-        console.log('HTML report written to fauji-report.html');
-      } else if (type === 'json') {
-        fs.writeFileSync('fauji-report.json', JSON.stringify(_log.getResultsJSON(), null, 2), 'utf8');
-        console.log('JSON report written to fauji-report.json');
-      }
-    }
     if (_log.failed > 0) {
       process.exitCode = 1;
     }

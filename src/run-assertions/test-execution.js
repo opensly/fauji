@@ -60,7 +60,7 @@ export async function runTestFiles(testFiles, options = {}) {
               }
             }
             
-            // Print summary only if we have results - FIX: Check array length, not .total property
+            
             if (logger.testResults.length > 0) {
               logger.printSummary();
               if (failed > 0) {
