@@ -7,10 +7,10 @@ export function toBeObject(received) {
   return getMatcherResult(isObject(received), 'toBeObject', received);
 }
 export function toBeString(received) {
-  return getMatcherResult(isString(received), 'toBeString', received);
+  return getMatcherResult(typeof received === 'string' || received instanceof String, 'toBeString', received);
 }
 export function toBeNumber(received) {
-  return getMatcherResult(isNumber(received), 'toBeNumber', received);
+  return getMatcherResult(typeof received === 'number', 'toBeNumber', received);
 }
 export function toBeBoolean(received) {
   return getMatcherResult(isBoolean(received), 'toBeBoolean', received);
