@@ -1,5 +1,57 @@
-import * as colors from 'colors/safe';
+import * as colors from 'colors/safe.js';
 import { printErrorDetails } from './print-error-details.js';
+
+// Helper function to safely serialize errors for worker thread communication
+function serializeErrorSafely(error) {
+  if (!error) return null;
+  
+  // Create a clean error object without function references
+  const cleanError = {
+    message: error.message || String(error),
+    name: error.name || 'Error',
+    stack: error.stack || null,
+    matcherName: error.matcherName || null,
+    isNot: error.isNot || false
+  };
+  
+  // Safely serialize expected and actual values, removing function objects
+  if (error.expected !== undefined) {
+    cleanError.expected = serializeValueSafely(error.expected);
+  }
+  
+  if (error.actual !== undefined) {
+    cleanError.actual = serializeValueSafely(error.actual);
+  }
+  
+  return cleanError;
+}
+
+// Helper function to safely serialize values, removing function objects
+function serializeValueSafely(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  
+  if (typeof value === 'function') {
+    // Replace function objects with a descriptive string
+    return '[Function]';
+  }
+  
+  if (Array.isArray(value)) {
+    return value.map(serializeValueSafely);
+  }
+  
+  if (typeof value === 'object') {
+    const cleanObject = {};
+    for (const [key, val] of Object.entries(value)) {
+      cleanObject[key] = serializeValueSafely(val);
+    }
+    return cleanObject;
+  }
+  
+  // For primitives, return as-is
+  return value;
+}
 
 class Logger {
   constructor({ stdout = process.stdout, stderr = process.stderr } = {}) {
@@ -99,7 +151,7 @@ class Logger {
         name: r.name,
         suite: r.suite,
         status: r.status,
-        error: r.error ? (r.error.stack || r.error.toString()) : null,
+        error: serializeErrorSafely(r.error),
         duration: r.duration,
         startTime: r.startTime,
         endTime: r.endTime,
@@ -126,7 +178,7 @@ class Logger {
     const failedSuites = this.failedSuites || this.failed;
     
     this.stdout.write(
-      colors.bold(' Test Suites: ') + 
+      colors.bold('\n\n Test Suites: ') + 
       `${failedSuites > 0 ? colors.red(failedSuites + ' failed') : colors.green(passedSuites + ' passed')} | ${totalSuites} total` + '\n'
     );
     this.stdout.write(

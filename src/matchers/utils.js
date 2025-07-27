@@ -5,7 +5,16 @@ import deepEqualCheck from 'deep-equal-check';
 export function isMatch(obj, partial) {
   if (typeof obj !== 'object' || obj === null || typeof partial !== 'object' || partial === null) return false;
   for (const key of Object.keys(partial)) {
-    if (!(key in obj) || !deepEqualCheck(obj[key], partial[key])) return false;
+    if (!(key in obj)) return false;
+    
+    // For nested objects, recursively check partial matching
+    if (typeof partial[key] === 'object' && partial[key] !== null && !Array.isArray(partial[key])) {
+      if (typeof obj[key] !== 'object' || obj[key] === null || Array.isArray(obj[key])) return false;
+      if (!isMatch(obj[key], partial[key])) return false;
+    } else {
+      // For primitive values, use exact equality
+      if (!deepEqualCheck(obj[key], partial[key])) return false;
+    }
   }
   return true;
 }
@@ -35,7 +44,6 @@ export function formatDiff(received, expected) {
 export function getMatcherResult(result, matcherName, received, expected, isNot = false) {
   if (!result) {
     try {
-      // Create a proper error object that can be thrown
       const notText = isNot ? 'not.' : '';
       const err = new Error();
       const stackLines = (err.stack || '').split('\n');
@@ -45,37 +53,77 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
       if (match && match[1]) {
         location = match[1];
       }
-      
-      // Create error message
+      // Extract data from spy/mock functions for better error reporting
+      let actualReceived = received;
+      if (typeof received === 'function' && !Array.isArray(received)) {
+        // Handle mock functions (Jest-like)
+        if (received.mock && received.mock.calls) {
+          actualReceived = received.mock.calls;
+        } else if (received.mock && received.mock.results) {
+          const returnValues = received.mock.results
+            .filter(result => result.type === 'return')
+            .map(result => result.value);
+          actualReceived = returnValues.length === 1 ? returnValues[0] : returnValues;
+        }
+        // Handle spy functions (Fauji-like)
+        else if (received.calls) {
+          actualReceived = received.calls;
+        } else if (received.results) {
+          const returnValues = received.results
+            .filter(result => result.type === 'return')
+            .map(result => result.value);
+          actualReceived = returnValues.length === 1 ? returnValues[0] : returnValues;
+        }
+      }
+      // Extract actual received data for error reporting
       let message = '';
       message += `\n${location ? 'at ' + location : ''}`;
       message += `\n\nDifference:`;
       if (typeof expected !== 'undefined') {
         message += `\n- Expected: ${util.inspect(expected, { depth: 5, colors: false })}`;
-        message += `\n+ Received: ${util.inspect(received, { depth: 5, colors: false })}`;
+        message += `\n+ Received: ${util.inspect(actualReceived, { depth: 5, colors: false })}`;
       } else {
         message += `\n- Expected: ${notText}${matcherName}`;
-        message += `\n+ Received: ${util.inspect(received, { depth: 5, colors: false })}`;
+        message += `\n+ Received: ${util.inspect(actualReceived, { depth: 5, colors: false })}`;
       }
-      if (["toEqual", "toMatchObject"].includes(matcherName) && typeof received === 'object' && typeof expected === 'object') {
-        message += formatDiff(received, expected);
+      if (["toEqual", "toMatchObject"].includes(matcherName) && typeof actualReceived === 'object' && typeof expected === 'object') {
+        message += formatDiff(actualReceived, expected);
       }
       message += '\n';
-      
-      // Create error object with expected/actual properties for better diff display
       const assertionError = new Error(message);
       assertionError.expected = expected;
-      assertionError.actual = received;
+      assertionError.actual = actualReceived;
       assertionError.matcherName = matcherName;
       assertionError.isNot = isNot;
-      
-      // Throw the error so the test runner can catch it
       throw assertionError;
     } catch (error) {
-      // If error creation fails, throw a simple assertion error
+      // Always extract actualReceived for fallback error as well
+      let actualReceived = received;
+      if (typeof received === 'function' && !Array.isArray(received)) {
+        // Handle mock functions (Jest-like)
+        if (received.mock && received.mock.calls) {
+          actualReceived = received.mock.calls;
+        } else if (received.mock && received.mock.results) {
+          const returnValues = received.mock.results
+            .filter(result => result.type === 'return')
+            .map(result => result.value);
+          actualReceived = returnValues.length === 1 ? returnValues[0] : returnValues;
+        }
+        // Handle spy functions (Fauji-like)
+        else if (received.calls) {
+          actualReceived = received.calls;
+        } else if (received.results) {
+          const returnValues = received.results
+            .filter(result => result.type === 'return')
+            .map(result => result.value);
+          actualReceived = returnValues.length === 1 ? returnValues[0] : returnValues;
+        }
+      }
       const simpleError = new Error(`Assertion failed: ${matcherName}`);
       simpleError.expected = expected;
-      simpleError.actual = received;
+      simpleError.actual = actualReceived;
+      simpleError.matcherName = matcherName;
+      simpleError.isNot = isNot;
       throw simpleError;
     }
   }

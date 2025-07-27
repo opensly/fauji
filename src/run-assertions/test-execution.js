@@ -1,4 +1,4 @@
-import colors from 'colors/safe';
+import colors from 'colors/safe.js';
 import os from 'os';
 import path from 'path';
 import { Worker } from 'worker_threads';
@@ -17,6 +17,7 @@ export async function runTestFiles(testFiles, options = {}) {
   let idx = 0;
   const results = [];
   const allTestResults = [];
+  const bufferedOutput = []; // Buffer to store all worker output
   let finished = false;
   let hasFailures = false;
 
@@ -50,18 +51,14 @@ export async function runTestFiles(testFiles, options = {}) {
             allTestResults.push(...msg.testResults.tests);
           }
           
-          // Display captured output from the worker thread with proper synchronization
+          // Buffer captured output instead of displaying immediately
           if (msg.stdout) {
-            // Ensure proper line breaks and flush the output
             const cleanOutput = msg.stdout.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            process.stdout.write(cleanOutput);
-            // Force flush to prevent concatenation with completion message
-            process.stdout.write('');
+            bufferedOutput.push({ type: 'stdout', content: cleanOutput, file });
           }
           if (msg.stderr) {
             const cleanError = msg.stderr.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            process.stderr.write(cleanError);
-            process.stderr.write('');
+            bufferedOutput.push({ type: 'stderr', content: cleanError, file });
           }
           
           completed++;
@@ -70,6 +67,15 @@ export async function runTestFiles(testFiles, options = {}) {
 
           if (completed === testFiles.length && !finished) {
             finished = true;
+            
+            // Display all buffered output first
+            for (const output of bufferedOutput) {
+              if (output.type === 'stdout') {
+                process.stdout.write(output.content);
+              } else if (output.type === 'stderr') {
+                process.stderr.write(output.content);
+              }
+            }
             
             // Create a consolidated logger with all results
             const consolidatedLogger = new Logger();
@@ -109,7 +115,14 @@ export async function runTestFiles(testFiles, options = {}) {
             consolidatedLogger.failed = totalFailed;
             consolidatedLogger.skipped = totalSkipped;
             consolidatedLogger.total = totalTests;
-            consolidatedLogger.testResults = allTestResults;
+            // Patch: Use the error object from the worker directly for reporting
+            consolidatedLogger.testResults = allTestResults.map(test => ({
+              ...test,
+              // If error is present and has actual/expected, use as-is
+              error: test.error && (test.error.actual !== undefined || test.error.expected !== undefined)
+                ? test.error
+                : null
+            }));
             
             // Store suite counts for summary
             consolidatedLogger.passedSuites = passedSuites;
@@ -117,12 +130,12 @@ export async function runTestFiles(testFiles, options = {}) {
             consolidatedLogger.skippedSuites = skippedSuites;
             consolidatedLogger.totalSuites = testFiles.length;
             
-            // Only show summary if we have test results
+            // Display final summary at the very end
             if (allTestResults.length > 0) {
               consolidatedLogger.printSummary();
               
               // Show appropriate final message
-              if (hasFailures || totalFailed > 0) {
+              if (totalFailed > 0) {
                 console.log(colors.red(`\n❌ ${totalFailed} test(s) failed across ${testFiles.length} file(s).`));
                 process.exit(1);
               } else {
@@ -143,7 +156,8 @@ export async function runTestFiles(testFiles, options = {}) {
       
       worker.on('error', (err) => {
         if (finished) return;
-        console.log(colors.red(`❌ Worker thread error for file ${file}: ${err.message}`));
+        const errorMsg = colors.red(`❌ Worker thread error for file ${file}: ${err.message}\n`);
+        bufferedOutput.push({ type: 'stderr', content: errorMsg, file });
         hasFailures = true;
         completed++;
         running--;
@@ -151,7 +165,18 @@ export async function runTestFiles(testFiles, options = {}) {
         
         if (completed === testFiles.length && !finished) {
           finished = true;
-          console.log(colors.red('\n❌ Test execution failed due to worker errors.'));
+          const finalErrorMsg = colors.red('\n❌ Test execution failed due to worker errors.\n');
+          bufferedOutput.push({ type: 'stderr', content: finalErrorMsg, file: 'system' });
+          
+          // Display all buffered output first
+          for (const output of bufferedOutput) {
+            if (output.type === 'stdout') {
+              process.stdout.write(output.content);
+            } else if (output.type === 'stderr') {
+              process.stderr.write(output.content);
+            }
+          }
+          
           process.exit(1);
         } else {
           runNext();
@@ -161,7 +186,8 @@ export async function runTestFiles(testFiles, options = {}) {
       worker.on('exit', (code) => {
         if (finished) return;
         if (code !== 0) {
-          console.log(colors.red(`❌ Worker stopped with exit code ${code}`));
+          const exitMsg = colors.red(`❌ Worker stopped with exit code ${code}\n`);
+          bufferedOutput.push({ type: 'stderr', content: exitMsg, file });
           hasFailures = true;
         }
         // Ensure worker is properly terminated

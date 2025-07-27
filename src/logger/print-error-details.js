@@ -1,4 +1,4 @@
-import * as colors from 'colors/safe';
+import * as colors from 'colors/safe.js';
 import * as diff from 'diff';
 import fs from 'fs';
 
@@ -15,17 +15,18 @@ export function printErrorDetails(error, outStream) {
   const isMultilineString = val => typeof val === 'string' && val.includes('\n');
   const isObjectOrArray = val => val && typeof val === 'object';
 
-  // Jest-style output for custom matcher failures
-  if (error.expected === undefined && error.matcherName) {
-    outStream.write('    expect(received).' + error.matcherName + '()\n\n');
-    outStream.write('    Received: ' + formatValue(error.actual) + '\n\n');
-    return;
-  }
-
-  if (error.expected !== undefined && error.actual !== undefined) {
+  // Handle matcher errors with actual/expected properties
+  if (error.actual !== undefined && error.expected !== undefined) {
+    // Show matcher context if available
+    if (error.matcherName) {
+      const notText = error.isNot ? 'not.' : '';
+      outStream.write('    expect(received).' + notText + error.matcherName + '()\n\n');
+    }
+    
+    // Show the difference
     outStream.write(colors.red('    Difference:') + '\n');
-    outStream.write(colors.red('    - Expected: ') + String(error.expected) + '\n');
-    outStream.write(colors.green('    + Received: ') + String(error.actual) + '\n');
+    outStream.write(colors.red('    - Expected: ') + formatValue(error.expected) + '\n');
+    outStream.write(colors.green('    + Received: ') + formatValue(error.actual) + '\n');
 
     // Only show patch diff for objects, arrays, or multi-line strings
     if (
@@ -45,6 +46,13 @@ export function printErrorDetails(error, outStream) {
       } catch (e) {
         // If diff creation fails, just show the basic expected/received
       }
+    }
+  } else if (error.matcherName) {
+    // Handle custom matcher failures without actual/expected
+    const notText = error.isNot ? 'not.' : '';
+    outStream.write('    expect(received).' + notText + error.matcherName + '()\n\n');
+    if (error.actual !== undefined) {
+      outStream.write('    Received: ' + formatValue(error.actual) + '\n\n');
     }
   } else if (error.message && error.message.includes('Difference:')) {
     // Handle assertion errors that already have formatted difference in message

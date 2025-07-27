@@ -72,6 +72,8 @@ async function runSuite(suite) {
   if (suite.mode === 'skip') return;
   getLogger().perceive('describe', suite.desc, suite.annotations);
   
+  // Registry isolation is handled at module level
+  
   for (const fn of suite.hooks.beforeAll) await fn();
   
   for (const test of suite.tests) {

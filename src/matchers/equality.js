@@ -18,6 +18,27 @@ export function toBeUndefined(received) {
   return getMatcherResult(received === undefined, 'toBeUndefined', received);
 }
 
-export function toBeCloseTo(received, expected) {
-  return getMatcherResult(Math.round(expected) === Math.round(received), 'toBeCloseTo', received, expected);
+export function toBeDefined(received) {
+  return getMatcherResult(received !== undefined, 'toBeDefined', received);
+}
+
+export function toBeCloseTo(received, expected, precision = 2) {
+  // Handle NaN cases
+  if (isNaN(received) || isNaN(expected)) {
+    return getMatcherResult(false, 'toBeCloseTo', received, expected);
+  }
+  
+  // Handle Infinity cases
+  if (!isFinite(received) || !isFinite(expected)) {
+    return getMatcherResult(received === expected, 'toBeCloseTo', received, expected);
+  }
+  
+  // Calculate precision multiplier
+  const multiplier = Math.pow(10, precision);
+  
+  // Round both values to the specified precision and compare
+  const roundedReceived = Math.round(received * multiplier);
+  const roundedExpected = Math.round(expected * multiplier);
+  
+  return getMatcherResult(roundedReceived === roundedExpected, 'toBeCloseTo', received, expected);
 } 

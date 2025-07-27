@@ -12,6 +12,7 @@ import * as satisfy from './satisfy.js';
 import * as throwMatcher from './throw.js';
 import * as length from './length.js';
 import * as utils from './utils.js';
+import { createNotHandler } from './notHandler.js';
 
 const customMatchers = {};
 
@@ -19,7 +20,7 @@ export function addMatchers(matchers) {
   Object.assign(customMatchers, matchers);
 }
 
-export function allMatchers(received) {
+export function allMatchers(received, isNot = false) {
   const builtIn = {
     ...equality,
     ...type,
@@ -35,17 +36,45 @@ export function allMatchers(received) {
     ...throwMatcher,
     ...length,
     ...utils,
+    rejects: asyncMatchers.rejects,
   };
   const matchers = { ...builtIn, ...customMatchers };
-  const proxy = {};
-  for (const key of Object.keys(matchers)) {
-    proxy[key] = (...args) => matchers[key](received, ...args);
-  }
-  proxy.not = {};
-  for (const key of Object.keys(matchers)) {
-    proxy.not[key] = (...args) => !matchers[key](received, ...args);
-  }
-  return proxy;
+
+  // Handler for the proxy
+  const handler = {
+    get(target, prop) {
+      if (prop === 'not') {
+        // Return a new proxy with isNot flipped
+        return allMatchers(received, !isNot);
+      }
+      if (typeof matchers[prop] === 'function') {
+        // Special handling for 'rejects' function
+        if (prop === 'rejects') {
+          return matchers[prop](received);
+        }
+        // For regular matcher functions, handle with args
+        return (...args) => {
+          if (!isNot) {
+            // Execute matcher and return matcher object for chaining
+            matchers[prop](received, ...args);
+            return allMatchers(received, isNot);
+          } else {
+            // Use separate .not handler for cleaner logic
+            const notHandler = createNotHandler(matchers[prop], prop);
+            notHandler(received, ...args);
+            return allMatchers(received, isNot);
+          }
+        };
+      }
+      // Handle special cases like 'rejects' that return objects
+      if (matchers[prop] && typeof matchers[prop] === 'object') {
+        return matchers[prop];
+      }
+      // Fallback to undefined
+      return undefined;
+    }
+  };
+  return new Proxy({}, handler);
 }
 
 export default {

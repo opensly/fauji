@@ -3,7 +3,8 @@ import { beforeAll, afterAll, beforeEach, afterEach } from './hooks.js';
 import { run } from './runner-core.js';
 import * as matchers from '../matchers/index.js';
 import * as fakeTimers from './fake-timers.js';
-import * as spy from '../matchers/spy.js';
+import { spy, fn, spyOn, mock, unmock, resetAllMocks, requireActual, requireMock, createSpy, mockReturnValue, mockImplementation, mockResolvedValue, mockRejectedValue } from '../matchers/spy.js';
+
 
 function setupGlobals() {
   global.describe = describe;
@@ -12,7 +13,9 @@ function setupGlobals() {
   global.afterAll = afterAll;
   global.beforeEach = beforeEach;
   global.afterEach = afterEach;
-  global.expect = matchers.allMatchers;
+  global.expect = (received) => {
+  return matchers.allMatchers(received);
+};
   global.run = run;
   global.addMatchers = matchers.addMatchers;
   global.describe.only = describe.only;
@@ -24,13 +27,20 @@ function setupGlobals() {
   global.advanceTimersByTime = fakeTimers.advanceTimersByTime;
   global.runAllTimers = fakeTimers.runAllTimers;
   global.resetTimers = fakeTimers.resetTimers;
-  global.fn = spy.fn;
-  global.spyOn = spy.spyOn;
-  global.mock = spy.mock;
-  global.unmock = spy.unmock;
-  global.resetAllMocks = spy.resetAllMocks;
-  global.requireActual = spy.requireActual;
-  global.requireMock = spy.requireMock;
+  global.fn = fn;
+  global.spy = fn; // Alias spy to fn as expected by tests
+  global.createSpy = createSpy; // Also expose createSpy directly
+  global.spyOn = spyOn;
+  global.mock = mock;
+  global.unmock = unmock;
+  global.resetAllMocks = resetAllMocks;
+  global.requireActual = requireActual;
+  global.requireMock = requireMock;
+  global.mockReturnValue = mockReturnValue;
+  global.mockImplementation = mockImplementation;
+  global.mockResolvedValue = mockResolvedValue;
+  global.mockRejectedValue = mockRejectedValue;
+
   global.getTimerCalls = fakeTimers.getTimerCalls;
   global.getTimerCallCount = fakeTimers.getTimerCallCount;
 }

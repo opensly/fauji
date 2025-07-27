@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'worker_threads';
-import * as colors from 'colors/safe';
+import * as colors from 'colors/safe.js';
 import { Writable } from 'stream';
 const { testFile, env } = workerData;
 
@@ -46,7 +46,51 @@ let testResults = null;
   const startTime = Date.now();
   try {
     // Import setup-globals to initialize the test environment
-    await import(new URL('./setup-globals.js', import.meta.url));
+    const setupGlobals = (await import(new URL('./setup-globals.js', import.meta.url))).default;
+    setupGlobals();
+    
+    // Import spy module properly to ensure all functions are available
+    try {
+      const spyModule = await import(new URL('../matchers/spy.js', import.meta.url));
+      
+      // The spy module will automatically initialize thread-local registries
+      // No need to manually initialize global registries here
+      
+      // Ensure all spy functions are available globally
+      if (spyModule.createSpy && !global.createSpy) {
+        global.createSpy = spyModule.createSpy;
+      }
+      if (spyModule.fn && !global.fn) {
+        global.fn = spyModule.fn;
+      }
+      if (spyModule.spyOn && !global.spyOn) {
+        global.spyOn = spyModule.spyOn;
+      }
+      if (spyModule.mock && !global.mock) {
+        global.mock = spyModule.mock;
+      }
+      if (spyModule.unmock && !global.unmock) {
+        global.unmock = spyModule.unmock;
+      }
+      if (spyModule.resetAllMocks && !global.resetAllMocks) {
+        global.resetAllMocks = spyModule.resetAllMocks;
+      }
+      if (spyModule.requireActual && !global.requireActual) {
+        global.requireActual = spyModule.requireActual;
+      }
+      if (spyModule.requireMock && !global.requireMock) {
+        global.requireMock = spyModule.requireMock;
+      }
+      
+      // Set global.spy to createSpy (not fn) for proper spy functionality
+      if (spyModule.createSpy && !global.spy) {
+        global.spy = spyModule.createSpy;
+      }
+      
+    } catch (importError) {
+      console.error('Failed to import spy module:', importError.message);
+      // Don't fallback to fn - let the test fail if spy module can't be imported
+    }
     
     // Reset suite state for this worker to prevent state pollution
     const { rootSuite, setCurrentSuite } = await import(new URL('./suite.js', import.meta.url));
@@ -102,6 +146,8 @@ let testResults = null;
   if (global._testLogger) {
     delete global._testLogger;
   }
+  
+  // Aggressive instrumentation log
   
   // Send results immediately instead of waiting for process exit
   parentPort.postMessage({
