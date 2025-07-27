@@ -162,16 +162,57 @@ export function isValidUUID(val) {
 
 export function matchSchema(obj, schema) {
   if (typeof schema !== 'object' || schema === null) return false;
+  
   for (const key in schema) {
     if (!(key in obj)) return false;
+    
     const type = schema[key];
+    const value = obj[key];
+    
     if (typeof type === 'string') {
-      if (typeof obj[key] !== type) return false;
+      // Handle string-based type specifications
+      switch (type) {
+        case 'array':
+          if (!Array.isArray(value)) return false;
+          break;
+        case 'string':
+          if (typeof value !== 'string') return false;
+          break;
+        case 'number':
+          if (typeof value !== 'number' || isNaN(value)) return false;
+          break;
+        case 'boolean':
+          if (typeof value !== 'boolean') return false;
+          break;
+        case 'object':
+          if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+          break;
+        case 'function':
+          if (typeof value !== 'function') return false;
+          break;
+        case 'null':
+          if (value !== null) return false;
+          break;
+        case 'undefined':
+          if (value !== undefined) return false;
+          break;
+        default:
+          // For custom string types, try to match the actual type
+          if (typeof value !== type) return false;
+          break;
+      }
     } else if (typeof type === 'function') {
-      if (!(obj[key] instanceof type)) return false;
+      // Handle function validators
+      if (!type(value)) return false;
     } else if (typeof type === 'object') {
-      if (!matchSchema(obj[key], type)) return false;
+      // Handle nested schema validation
+      if (typeof value !== 'object' || value === null) return false;
+      if (!matchSchema(value, type)) return false;
+    } else {
+      // Fallback to basic type checking
+      if (typeof value !== type) return false;
     }
   }
+  
   return true;
 }
