@@ -1,13 +1,23 @@
 import { getMatcherResult } from './utils.js';
 
 export function toMatch(received, expected) {
-  return getMatcherResult(typeof received === 'string' && (expected instanceof RegExp ? expected.test(received) : received.includes(expected)), 'toMatch', received, expected);
+  if (typeof received !== 'string') {
+    return getMatcherResult(false, 'toMatch', received, expected);
+  }
+  
+  if (expected instanceof RegExp) {
+    return getMatcherResult(expected.test(received), 'toMatch', received, expected);
+  } else {
+    // For string arguments, use case-insensitive matching by default
+    return getMatcherResult(received.toLowerCase().includes(String(expected).toLowerCase()), 'toMatch', received, expected);
+  }
 }
 
 export function toContain(received, expected) {
   let result;
   if (typeof received === 'string') {
-    result = received.indexOf(String(expected)) !== -1;
+    // For string arguments, use case-insensitive matching by default
+    result = received.toLowerCase().indexOf(String(expected).toLowerCase()) !== -1;
   } else if (Array.isArray(received)) {
     // For objects, use deep equality check
     if (typeof expected === 'object' && expected !== null && !Array.isArray(expected)) {
