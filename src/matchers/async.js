@@ -4,16 +4,30 @@ export async function toResolve(received) {
   try {
     await received;
     return getMatcherResult(true, 'toResolve', received);
-  } catch {
-    return getMatcherResult(false, 'toResolve', received);
+  } catch (error) {
+    // For async matchers, we need to handle failures differently
+    // Return a result object that indicates failure without throwing
+    return {
+      success: false,
+      error: new Error(`Expected promise to resolve, but it rejected with: ${error.message}`),
+      matcherName: 'toResolve',
+      received: received
+    };
   }
 }
 
 export async function toReject(received) {
   try {
     await received;
-    return getMatcherResult(false, 'toReject', received);
-  } catch {
+    // For async matchers, we need to handle failures differently
+    // Return a result object that indicates failure without throwing
+    return {
+      success: false,
+      error: new Error('Expected promise to reject, but it resolved'),
+      matcherName: 'toReject',
+      received: received
+    };
+  } catch (error) {
     return getMatcherResult(true, 'toReject', received);
   }
 } 

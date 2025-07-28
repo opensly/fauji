@@ -13,6 +13,7 @@ import * as throwMatcher from './throw.js';
 import * as length from './length.js';
 import * as utils from './utils.js';
 import { createNotHandler } from './notHandler.js';
+import { createAsyncMatcherWrapper, isAsyncMatcherResult } from './asyncMatcherWrapper.js';
 
 const customMatchers = {};
 
@@ -21,6 +22,12 @@ export function addMatchers(matchers) {
 }
 
 export function allMatchers(received, isNot = false) {
+  // Create async matcher wrappers for async matchers
+  const asyncMatcherWrappers = {
+    toResolve: createAsyncMatcherWrapper(asyncMatchers.toResolve, 'toResolve'),
+    toReject: createAsyncMatcherWrapper(asyncMatchers.toReject, 'toReject'),
+  };
+
   const builtIn = {
     ...equality,
     ...type,
@@ -37,6 +44,8 @@ export function allMatchers(received, isNot = false) {
     ...length,
     ...utils,
     rejects: asyncMatchers.rejects,
+    // Add async matcher wrappers
+    ...asyncMatcherWrappers,
   };
   const matchers = { ...builtIn, ...customMatchers };
 
@@ -56,7 +65,26 @@ export function allMatchers(received, isNot = false) {
         return (...args) => {
           if (!isNot) {
             // Execute matcher and return matcher object for chaining
-            matchers[prop](received, ...args);
+            const result = matchers[prop](received, ...args);
+            
+            // Check if this is an async matcher result
+            if (isAsyncMatcherResult(result)) {
+              // For async matchers, return a special object that can be awaited
+              return {
+                asyncMatcherResult: result,
+                chain: () => allMatchers(received, isNot),
+                execute: async () => {
+                  try {
+                    await result.execute();
+                    return allMatchers(received, isNot);
+                  } catch (error) {
+                    // Re-throw the error to be handled by the test runner
+                    throw error;
+                  }
+                }
+              };
+            }
+            
             return allMatchers(received, isNot);
           } else {
             // Use separate .not handler for cleaner logic

@@ -4,6 +4,7 @@ import { run } from './runner-core.js';
 import * as matchers from '../matchers/index.js';
 import * as fakeTimers from './fake-timers.js';
 import { spy, fn, spyOn, mock, unmock, resetAllMocks, requireActual, requireMock, createSpy, mockReturnValue, mockImplementation, mockResolvedValue, mockRejectedValue } from '../matchers/spy.js';
+import { enhancedExpect } from './enhanced-expect.js';
 
 
 function setupGlobals() {
@@ -14,8 +15,8 @@ function setupGlobals() {
   global.beforeEach = beforeEach;
   global.afterEach = afterEach;
   global.expect = (received) => {
-  return matchers.allMatchers(received);
-};
+    return enhancedExpect(received);
+  };
   global.run = run;
   global.addMatchers = matchers.addMatchers;
   global.describe.only = describe.only;

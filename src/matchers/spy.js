@@ -288,9 +288,24 @@ export function mock(modulePath, mockImpl) {
     return emptyMock;
   }
   
-  // Store whatever is provided (including null, primitives)
-  // This allows the mock to be exactly what the user provides
-  // Note: This overwrites any existing mock for the same modulePath
+  // For objects, we need to store a reference and return that reference
+  // so that subsequent calls to mock() return the same object
+  if (typeof mockImpl === 'object' && mockImpl !== null) {
+    // Check if we already have a mock for this module
+    const existingMock = mockRegistry.get(modulePath);
+    if (existingMock && typeof existingMock === 'object' && existingMock !== null) {
+      // Update the existing object's properties instead of replacing it
+      Object.keys(existingMock).forEach(key => delete existingMock[key]);
+      Object.assign(existingMock, mockImpl);
+      return existingMock;
+    } else {
+      // Store the new object
+      mockRegistry.set(modulePath, mockImpl);
+      return mockImpl;
+    }
+  }
+  
+  // For primitives and null, store and return as is
   mockRegistry.set(modulePath, mockImpl);
   return mockImpl;
 }
@@ -319,9 +334,7 @@ export function requireActual(modulePath) {
 
 export function requireMock(modulePath) {
   const mock = mockRegistry.get(modulePath);
-  // Return the mock if it exists, otherwise return empty object
-  // Note: This means null/undefined mocks will return null/undefined, not empty object
-  return mock !== undefined ? mock : {};
+  return mock;
 }
 
 // --- Advanced Mock Features (Phase 2) ---

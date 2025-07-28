@@ -23,4 +23,8 @@ export function toBeDate(received) {
 }
 export function toBeRegExp(received) {
   return getMatcherResult(isRegExp(received), 'toBeRegExp', received);
-} 
+}
+export function toBeInstanceOf(received, expected) {
+  return getMatcherResult(received instanceof expected, 'toBeInstanceOf', received, expected);
+}
+ 

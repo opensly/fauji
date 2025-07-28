@@ -4,6 +4,8 @@ import deepEqualCheck from 'deep-equal-check';
 
 export function isMatch(obj, partial) {
   if (typeof obj !== 'object' || obj === null || typeof partial !== 'object' || partial === null) return false;
+  
+  // Check if all keys in partial exist in obj
   for (const key of Object.keys(partial)) {
     if (!(key in obj)) return false;
     
@@ -11,10 +13,37 @@ export function isMatch(obj, partial) {
     if (typeof partial[key] === 'object' && partial[key] !== null && !Array.isArray(partial[key])) {
       if (typeof obj[key] !== 'object' || obj[key] === null || Array.isArray(obj[key])) return false;
       if (!isMatch(obj[key], partial[key])) return false;
-    } else {
-      // For primitive values, use exact equality
+    } 
+    // For arrays, check if partial array is a subset of obj array
+    else if (Array.isArray(partial[key])) {
+      if (!Array.isArray(obj[key])) return false;
+      if (!isArraySubset(obj[key], partial[key])) return false;
+    }
+    // For primitive values, use exact equality
+    else {
       if (!deepEqualCheck(obj[key], partial[key])) return false;
     }
+  }
+  
+  // Check if obj has any extra keys that partial doesn't have
+  // This ensures that undefined properties in obj are considered
+  for (const key of Object.keys(obj)) {
+    if (!(key in partial)) {
+      // If obj has an undefined property and partial doesn't have that key, it should fail
+      if (obj[key] === undefined) return false;
+    }
+  }
+  
+  return true;
+}
+
+function isArraySubset(arr, subset) {
+  if (subset.length === 0) return true;
+  if (arr.length < subset.length) return false;
+  
+  // Check if subset is a prefix of arr
+  for (let i = 0; i < subset.length; i++) {
+    if (!deepEqualCheck(arr[i], subset[i])) return false;
   }
   return true;
 }

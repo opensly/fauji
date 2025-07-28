@@ -3,7 +3,9 @@ import { getMatcherResult } from './utils.js';
 import deepEqualCheck from 'deep-equal-check';
 
 export function toBe(received, expected) {
-  return getMatcherResult(received === expected, 'toBe', received, expected);
+  // Use Object.is() for special values like NaN, +0, -0
+  const isEqual = Object.is(received, expected);
+  return getMatcherResult(isEqual, 'toBe', received, expected);
 }
 
 export function toEqual(received, expected) {
@@ -23,22 +25,26 @@ export function toBeDefined(received) {
 }
 
 export function toBeCloseTo(received, expected, precision = 2) {
-  // Handle NaN cases
+  if (typeof precision !== 'number' || precision < 0 || !Number.isInteger(precision)) {
+    throw new Error('toBeCloseTo precision must be a non-negative integer');
+  }
+
+  // Handle NaN cases - both values must be NaN to be considered equal
+  if (isNaN(received) && isNaN(expected)) {
+    return getMatcherResult(true, 'toBeCloseTo', received, expected);
+  }
   if (isNaN(received) || isNaN(expected)) {
     return getMatcherResult(false, 'toBeCloseTo', received, expected);
   }
   
-  // Handle Infinity cases
+  // Handle Infinity cases - both must be the same infinity
   if (!isFinite(received) || !isFinite(expected)) {
     return getMatcherResult(received === expected, 'toBeCloseTo', received, expected);
   }
   
-  // Calculate precision multiplier
-  const multiplier = Math.pow(10, precision);
+  const tolerance = Math.pow(10, -precision) / 2;
+  const diff = Math.abs(received - expected);
+  const isClose = diff < tolerance;
   
-  // Round both values to the specified precision and compare
-  const roundedReceived = Math.round(received * multiplier);
-  const roundedExpected = Math.round(expected * multiplier);
-  
-  return getMatcherResult(roundedReceived === roundedExpected, 'toBeCloseTo', received, expected);
-} 
+  return getMatcherResult(isClose, 'toBeCloseTo', received, expected);
+}
