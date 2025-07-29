@@ -12,4 +12,4 @@ export function setupJsdomIfNeeded(options) {
     global.CustomEvent = dom.window.CustomEvent;
     global.getComputedStyle = dom.window.getComputedStyle;
   }
-} 
+}

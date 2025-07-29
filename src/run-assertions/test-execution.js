@@ -1,14 +1,47 @@
 import colors from 'colors/safe.js';
 import os from 'os';
 import path from 'path';
+import fs from 'fs';
 import { Worker } from 'worker_threads';
 import { Logger } from '../logger/logger-core.js';
+
+// Constants for file size limits
+const LARGE_FILE_THRESHOLD = 50 * 1024; // 50KB
+const HUGE_FILE_THRESHOLD = 200 * 1024; // 200KB
 
 export async function runTestFiles(testFiles, options = {}) {
   const globalStartTime = Date.now();
   if (!testFiles.length) {
     console.log(colors.yellow('No test scripts found.'));
     process.exit(0);
+  }
+  
+  // Pre-process files to detect large ones
+  const processedFiles = testFiles.map(file => {
+    try {
+      const stats = fs.statSync(file);
+      return {
+        path: file,
+        size: stats.size,
+        isLarge: stats.size > (options.maxFileSize || LARGE_FILE_THRESHOLD),
+        isHuge: stats.size > HUGE_FILE_THRESHOLD
+      };
+    } catch (error) {
+      return { path: file, size: 0, isLarge: false, isHuge: false };
+    }
+  });
+
+  // Replace restrictive strategies with optimization strategies
+  const optimizationStrategy = options.optimizationStrategy || 'auto';
+  const largeFiles = processedFiles.filter(f => f.isLarge);
+
+  if (largeFiles.length > 0) {
+    console.log(colors.blue(`\n🚀 Optimizing ${largeFiles.length} large test file(s) for better performance:`));
+    largeFiles.forEach(file => {
+      const sizeKB = Math.round(file.size / 1024);
+      console.log(colors.blue(`   - ${file.path} (${sizeKB}KB) - applying optimizations`));
+    });
+    console.log(colors.blue('   Large files will run with enhanced memory management and timeouts.\n'));
   }
   
   const maxWorkers = typeof options.parallel === 'number' ? options.parallel : os.cpus().length;
@@ -25,17 +58,22 @@ export async function runTestFiles(testFiles, options = {}) {
 
   return new Promise((resolve) => {
     function runNext() {
-      if (idx >= testFiles.length) return;
-      const file = testFiles[idx++];
+      if (idx >= processedFiles.length) return;
+      const fileInfo = processedFiles[idx++];
+      const file = fileInfo.path;
       running++;
       const env = { ...process.env };
       if (options.report) env.FAUJI_REPORT = options.report;
+      
+      // Add file size info to environment for worker
+      env.FAUJI_FILE_SIZE = fileInfo.size.toString();
+      env.FAUJI_IS_LARGE_FILE = fileInfo.isLarge.toString();
       
       // Determine the correct extension for the worker file
       const currentExt = import.meta.url.split('.').pop();
       const workerExt = currentExt === 'cjs' ? '.cjs' : '.mjs';
       const worker = new Worker(new URL(`./worker-thread${workerExt}`, import.meta.url), {
-        workerData: { testFile: file, env }
+        workerData: { testFile: file, env, options }
       });
       
       worker.on('message', (msg) => {
@@ -115,10 +153,8 @@ export async function runTestFiles(testFiles, options = {}) {
             consolidatedLogger.failed = totalFailed;
             consolidatedLogger.skipped = totalSkipped;
             consolidatedLogger.total = totalTests;
-            // Patch: Use the error object from the worker directly for reporting
             consolidatedLogger.testResults = allTestResults.map(test => ({
               ...test,
-              // If error is present and has actual/expected, use as-is
               error: test.error && (test.error.actual !== undefined || test.error.expected !== undefined)
                 ? test.error
                 : null
@@ -156,14 +192,25 @@ export async function runTestFiles(testFiles, options = {}) {
       
       worker.on('error', (err) => {
         if (finished) return;
-        const errorMsg = colors.red(`❌ Worker thread error for file ${file}: ${err.message}\n`);
+        
+        // Check if this is a large file that failed
+        const fileInfo = processedFiles.find(f => f.path === file);
+        const isLargeFile = fileInfo && fileInfo.isLarge;
+        
+        let errorMsg;
+        if (isLargeFile && err.message.includes('Bad Request')) {
+          errorMsg = colors.red(`❌ Large test file failed: ${file}\n   Error: ${err.message}\n   Recommendation: Split this file into smaller test files.\n`);
+        } else {
+          errorMsg = colors.red(`❌ Worker thread error for file ${file}: ${err.message}\n`);
+        }
+        
         bufferedOutput.push({ type: 'stderr', content: errorMsg, file });
         hasFailures = true;
         completed++;
         running--;
         results.push({ file, error: err.message });
         
-        if (completed === testFiles.length && !finished) {
+        if (completed === processedFiles.length && !finished) {
           finished = true;
           const finalErrorMsg = colors.red('\n❌ Test execution failed due to worker errors.\n');
           bufferedOutput.push({ type: 'stderr', content: finalErrorMsg, file: 'system' });

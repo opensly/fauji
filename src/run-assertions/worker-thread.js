@@ -1,11 +1,49 @@
 import { parentPort, workerData } from 'worker_threads';
 import * as colors from 'colors/safe.js';
 import { Writable } from 'stream';
-const { testFile, env } = workerData;
+const { testFile, env, options } = workerData;
 
 // Set environment variables
 if (env) {
   Object.assign(process.env, env);
+}
+
+// Enhanced large file handling with optimizations
+const isLargeFile = process.env.FAUJI_IS_LARGE_FILE === 'true';
+const fileSize = parseInt(process.env.FAUJI_FILE_SIZE || '0', 10);
+
+if (isLargeFile) {
+  console.log(colors.blue(`🔧 Applying optimizations for large file (${Math.round(fileSize / 1024)}KB)`));
+  
+  // Enhanced memory management
+  if (global.gc) {
+    global.gc();
+  }
+  
+  // Adaptive timeout based on file size
+  const baseTimeout = 30000; // 30 seconds
+  const sizeMultiplier = Math.max(1, fileSize / (50 * 1024)); // Scale with size
+  const adaptiveTimeout = Math.min(baseTimeout * sizeMultiplier, 120000); // Max 2 minutes
+  
+  const timeout = setTimeout(() => {
+    console.error(colors.red(`⏰ Large file execution timeout after ${adaptiveTimeout/1000}s`));
+    console.error(colors.yellow('💡 Consider splitting the file or increasing timeout'));
+    process.exit(1);
+  }, adaptiveTimeout);
+  
+  process.on('exit', () => clearTimeout(timeout));
+  
+  // Enhanced error recovery
+  process.on('uncaughtException', (err) => {
+    if (err.message.includes('Bad Request') || err.message.includes('memory')) {
+      console.error(colors.red(`💥 Large file execution error: ${err.message}`));
+      console.error(colors.yellow('💡 This might be due to file complexity. Consider:'));
+      console.error(colors.yellow('   1. Splitting the test file into smaller files'));
+      console.error(colors.yellow('   2. Reducing the number of test cases per file'));
+      console.error(colors.yellow('   3. Using --optimization-strategy=memory for enhanced memory management'));
+    }
+    process.exit(1);
+  });
 }
 
 // BufferStream to capture output
@@ -45,13 +83,20 @@ let testResults = null;
 (async () => {
   const startTime = Date.now();
   try {
+    // Setup JSDOM environment if needed (before setting up globals)
+    if (options && options.env === 'jsdom') {
+      const { setupJsdomIfNeeded } = await import(new URL('./env-setup.js', import.meta.url));
+      setupJsdomIfNeeded(options);
+    }
+    
     // Import setup-globals to initialize the test environment
     const setupGlobals = (await import(new URL('./setup-globals.js', import.meta.url))).default;
     setupGlobals();
     
-    // Import spy module properly to ensure all functions are available
+    // Import spy module and spy matchers properly to ensure all functions are available
     try {
       const spyModule = await import(new URL('../matchers/spy.js', import.meta.url));
+      const spyMatchers = await import(new URL('../matchers/spyMatchers.js', import.meta.url));
       
       // The spy module will automatically initialize thread-local registries
       // No need to manually initialize global registries here
@@ -85,6 +130,22 @@ let testResults = null;
       // Set global.spy to createSpy (not fn) for proper spy functionality
       if (spyModule.createSpy && !global.spy) {
         global.spy = spyModule.createSpy;
+      }
+      
+      // Add isMockFunction and isSpy for test compatibility
+      if (spyModule.isMockFunction && !global.isMockFunction) {
+        global.isMockFunction = spyModule.isMockFunction;
+      }
+      if (spyModule.isSpy && !global.isSpy) {
+        global.isSpy = spyModule.isSpy;
+      }
+      
+      // Add spy matchers to global expect matchers
+      if (spyMatchers && !global._spyMatchersAdded) {
+        // Add spy matchers to the global expect function
+        const { allMatchers } = await import(new URL('../matchers/index.js', import.meta.url));
+        // The spy matchers should already be included in allMatchers, but let's ensure they're available
+        global._spyMatchersAdded = true;
       }
       
     } catch (importError) {

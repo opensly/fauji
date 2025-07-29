@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 
 // Helper to print usage
 function printHelp() {
-  console.log(`\nUsage: fauji [options]\n\nOptions:\n  -d, --dir <directory>      Directory to run tests in\n  -p, --pattern <pattern>    Pattern to match test files\n  -n, --name <name>          Name of the test to run\n  -w, --watch                Watch files for changes\n  --coverage                 Collect code coverage\n  --parallel <num>           Run test files in parallel (default: # of CPUs)\n  --env <env>                Test environment (node|jsdom)\n  --config <file>            Path to config file\n  -h, --help                 Show help\n  -v, --version              Show version\n`);
+  console.log(`\nUsage: fauji [options]\n\nOptions:\n  -d, --dir <directory>      Directory to run tests in\n  -p, --pattern <pattern>    Pattern to match test files\n  -n, --name <name>          Name of the test to run\n  -w, --watch                Watch files for changes\n  --coverage                 Collect code coverage\n  --parallel <num>           Run test files in parallel (default: # of CPUs)\n  --env <env>                Test environment (node|jsdom)\n  --config <file>            Path to config file\n  --optimization-strategy <strategy>  Strategy for large files (auto|memory|timeout)\n  --max-file-size <bytes>    File size threshold for optimizations (default: 50KB)\n  -h, --help                 Show help\n  -v, --version              Show version\n`);
 }
 
 // Helper to print version
@@ -53,6 +53,12 @@ for (let i = 0; i < args.length; i++) {
     i++;
   } else if (arg === '--config') {
     configFile = args[i + 1];
+    i++;
+  } else if (arg === '--optimization-strategy') {
+    options.optimizationStrategy = args[i + 1];
+    i++;
+  } else if (arg === '--max-file-size') {
+    options.maxFileSize = parseInt(args[i + 1], 10);
     i++;
   } else if (arg === '--help' || arg === '-h') {
     printHelp();

@@ -1,4 +1,3 @@
-// Enhanced expect function for async matcher support
 import { allMatchers } from '../matchers/index.js';
 import { isAsyncMatcherResult } from '../matchers/asyncMatcherWrapper.js';
 
@@ -10,7 +9,6 @@ import { isAsyncMatcherResult } from '../matchers/asyncMatcherWrapper.js';
 export function enhancedExpect(exp) {
   const baseMatchers = allMatchers(exp);
   
-  // Create enhanced proxy that handles async matchers
   const handler = {
     get(target, prop) {
       const original = target[prop];
@@ -19,22 +17,19 @@ export function enhancedExpect(exp) {
         return (...args) => {
           const result = original(...args);
           
-          // Check if this is an async matcher result
           if (isAsyncMatcherResult(result)) {
-            // Return an enhanced async matcher result
             return {
               ...result,
-              // Add a method to execute and handle the result
+              
               async executeAndHandle() {
                 try {
                   await result.execute();
-                  return true; // Success
+                  return true;
                 } catch (error) {
-                  // This is an expected failure, not a test error
-                  return false; // Failure
+                  return false;
                 }
               },
-              // Add a method to get the result without throwing
+              
               async getResult() {
                 try {
                   await result.execute();
@@ -43,8 +38,7 @@ export function enhancedExpect(exp) {
                   return { success: false, error };
                 }
               },
-              // Add a method that throws when the async matcher fails
-              // This is used by tests that expect expect().toThrow()
+              
               async executeAndThrowIfFailed() {
                 try {
                   await result.execute();

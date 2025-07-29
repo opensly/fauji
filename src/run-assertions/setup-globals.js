@@ -3,7 +3,7 @@ import { beforeAll, afterAll, beforeEach, afterEach } from './hooks.js';
 import { run } from './runner-core.js';
 import * as matchers from '../matchers/index.js';
 import * as fakeTimers from './fake-timers.js';
-import { spy, fn, spyOn, mock, unmock, resetAllMocks, requireActual, requireMock, createSpy, mockReturnValue, mockImplementation, mockResolvedValue, mockRejectedValue } from '../matchers/spy.js';
+import { spy, fn, spyOn, mock, unmock, resetAllMocks, requireActual, requireMock, createSpy, mockReturnValue, mockImplementation, mockResolvedValue, mockRejectedValue, isMockFunction, isSpy } from '../matchers/spy.js';
 import { enhancedExpect } from './enhanced-expect.js';
 
 
@@ -41,6 +41,8 @@ function setupGlobals() {
   global.mockImplementation = mockImplementation;
   global.mockResolvedValue = mockResolvedValue;
   global.mockRejectedValue = mockRejectedValue;
+  global.isMockFunction = isMockFunction;
+  global.isSpy = isSpy;
 
   global.getTimerCalls = fakeTimers.getTimerCalls;
   global.getTimerCallCount = fakeTimers.getTimerCallCount;
