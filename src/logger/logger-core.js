@@ -26,21 +26,26 @@ function serializeErrorSafely(error) {
   return cleanError;
 }
 
-// Helper function to safely serialize values, removing function objects
+/**
+ * Recursively serializes values for safe logging by converting functions to '[Function]' strings
+ * while preserving the structure of objects and arrays
+ * @param {*} value - The value to serialize (any type)
+ * @returns {any} - Serialized value where:
+ *  Functions become '[Function]' string
+ *  Objects become new objects with recursively serialized properties  
+ *  Arrays become new arrays with recursively serialized elements
+ *  Primitives (string, number, boolean) and null/undefined are returned as-is
+ */
 function serializeValueSafely(value) {
   if (value === null || value === undefined) {
     return value;
   }
-  
   if (typeof value === 'function') {
-    // Replace function objects with a descriptive string
     return '[Function]';
   }
-  
   if (Array.isArray(value)) {
     return value.map(serializeValueSafely);
   }
-  
   if (typeof value === 'object') {
     const cleanObject = {};
     for (const [key, val] of Object.entries(value)) {
@@ -48,8 +53,6 @@ function serializeValueSafely(value) {
     }
     return cleanObject;
   }
-  
-  // For primitives, return as-is
   return value;
 }
 

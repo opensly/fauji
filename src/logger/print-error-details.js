@@ -8,16 +8,28 @@ function formatValue(val) {
   return String(val);
 }
 
+const isMultilineString = val => typeof val === 'string' && val.includes('\n');
+const isObjectOrArray = val => val && typeof val === 'object';
+
+function findUserStackFrame(errorStack) {
+  const stackLines = errorStack.split('\n');
+  for (const line of stackLines) {
+    if (
+        line.includes('.js') && 
+        !line.includes('node_modules/fauji') && 
+        !line.includes('node:internal') && 
+        !line.includes('matchers/utils') && 
+        !line.includes('run-assertions/logger')
+    ) {
+      return line;
+    }
+  }
+}
+
 export function printErrorDetails(error, outStream) {
   if (!error) return;
 
-  const isPrimitive = val => val === null || (typeof val !== 'object' && typeof val !== 'function');
-  const isMultilineString = val => typeof val === 'string' && val.includes('\n');
-  const isObjectOrArray = val => val && typeof val === 'object';
-
-  // Handle matcher errors with actual/expected properties
   if (error.actual !== undefined && error.expected !== undefined) {
-    // Show matcher context if available
     if (error.matcherName) {
       const notText = error.isNot ? 'not.' : '';
       outStream.write('    expect(received).' + notText + error.matcherName + '()\n\n');
@@ -85,21 +97,7 @@ export function printErrorDetails(error, outStream) {
 
   // User-focused stack/code frame
   if (error.stack) {
-    // Find the first stack frame that is not internal or in node_modules/fauji
-    const stackLines = error.stack.split('\n');
-    let userFrame = null;
-    for (const line of stackLines) {
-      if (
-        line.includes('.js') &&
-        !line.includes('node_modules/fauji') &&
-        !line.includes('node:internal') &&
-        !line.includes('matchers/utils') &&
-        !line.includes('run-assertions/logger')
-      ) {
-        userFrame = line;
-        break;
-      }
-    }
+    const userFrame = findUserStackFrame(error.stack);
     // If not found, fall back to the first non-internal frame
     if (!userFrame) {
       userFrame = stackLines.find(l => l.includes('.js') && !l.includes('node:internal')) || stackLines[1];

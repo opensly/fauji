@@ -98,10 +98,6 @@ let testResults = null;
       const spyModule = await import(new URL('../matchers/spy.js', import.meta.url));
       const spyMatchers = await import(new URL('../matchers/spyMatchers.js', import.meta.url));
       
-      // The spy module will automatically initialize thread-local registries
-      // No need to manually initialize global registries here
-      
-      // Ensure all spy functions are available globally
       if (spyModule.createSpy && !global.createSpy) {
         global.createSpy = spyModule.createSpy;
       }
@@ -126,46 +122,32 @@ let testResults = null;
       if (spyModule.requireMock && !global.requireMock) {
         global.requireMock = spyModule.requireMock;
       }
-      
-      // Set global.spy to createSpy (not fn) for proper spy functionality
       if (spyModule.createSpy && !global.spy) {
         global.spy = spyModule.createSpy;
       }
-      
-      // Add isMockFunction and isSpy for test compatibility
       if (spyModule.isMockFunction && !global.isMockFunction) {
         global.isMockFunction = spyModule.isMockFunction;
       }
       if (spyModule.isSpy && !global.isSpy) {
         global.isSpy = spyModule.isSpy;
       }
-      
-      // Add spy matchers to global expect matchers
       if (spyMatchers && !global._spyMatchersAdded) {
-        // Add spy matchers to the global expect function
         const { allMatchers } = await import(new URL('../matchers/index.js', import.meta.url));
-        // The spy matchers should already be included in allMatchers, but let's ensure they're available
         global._spyMatchersAdded = true;
       }
-      
     } catch (importError) {
       console.error('Failed to import spy module:', importError.message);
-      // Don't fallback to fn - let the test fail if spy module can't be imported
     }
     
-    // Reset suite state for this worker to prevent state pollution
     const { rootSuite, setCurrentSuite } = await import(new URL('./suite.js', import.meta.url));
     setCurrentSuite(rootSuite);
-    
     
     const { Logger } = await import(new URL('../logger/logger-core.js', import.meta.url));
     const workerLogger = new Logger({ stdout: bufferStdout, stderr: bufferStderr });
     global._testLogger = workerLogger;
     
-    // Import the test file (which will register tests)
     await import(new URL(testFile, `file://${process.cwd()}/`).href);
 
-    // Run the tests if the run function is available
     if (typeof global.run === 'function') {
       await global.run();
     }
@@ -196,19 +178,14 @@ let testResults = null;
     console.error(colors.red('Error in test file execution:'), e);
   }
 
-  // After test execution, before capturing output:
-  // Allow any pending writes to flush
   await new Promise(resolve => setImmediate(resolve));
 
   capturedStdout = bufferStdout.toString();
   capturedStderr = bufferStderr.toString();
 
-  // Clean up global state before sending results
   if (global._testLogger) {
     delete global._testLogger;
   }
-  
-  // Aggressive instrumentation log
   
   // Send results immediately instead of waiting for process exit
   parentPort.postMessage({
@@ -219,4 +196,5 @@ let testResults = null;
     code: error ? 1 : 0,
     testResults
   });
+
 })();

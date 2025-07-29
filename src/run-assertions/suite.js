@@ -35,4 +35,4 @@ export default {
   getCurrentSuite,
   setCurrentSuite,
   Suite,
-}; 
+};

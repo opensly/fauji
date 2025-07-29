@@ -1,8 +1,3 @@
-/**
- * Separate validation module for spy/mock functions
- * This provides clean separation between validation logic and matcher logic
- */
-
 import { isSpy, isMockFunction } from './spy.js';
 
 /**
@@ -94,4 +89,4 @@ function getCallCount(fn) {
     return fn.mock.calls.length;
   }
   return 0;
-} 
+}

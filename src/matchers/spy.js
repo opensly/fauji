@@ -1,14 +1,14 @@
-// Provides spy, stub, and mock utilities for use in use in tests and matchers.
-import { builtinModules } from 'module';
+import { getMockRegistry, getGlobalMockRegistry, clearWorkerRegistries } from './workerIsolatedRegistry.js';
 
-// --- Spy Implementation ---
+const mockRegistry = getMockRegistry();
+const globalMockRegistry = getGlobalMockRegistry();
+
 export function createSpy(fn) {
   const spy = function(...args) {
     spy.calls.push(args);
     spy.callCount++;
     let result, threw = false, error;
     try {
-      // Check for mock implementation first
       if (spy._mockImplementation) {
         result = spy._mockImplementation.apply(this, args);
       } else if (spy._mockReturnValue !== undefined) {
@@ -82,7 +82,6 @@ export function createSpy(fn) {
 export const spy = createSpy;
 export function isSpy(fn) { return fn && fn.isSpy; }
 
-// --- Stub Implementation ---
 export function createStub(obj, methodName, impl) {
   if (!obj || typeof obj[methodName] !== 'function') throw new Error('No such method to stub');
   const original = obj[methodName];
@@ -93,7 +92,6 @@ export function createStub(obj, methodName, impl) {
 }
 export const stub = createStub;
 
-// --- Mock Function Implementation (Jest-like) ---
 export function fn(impl) {
   const mockFn = function(...args) {
     mockFn.mock.calls.push(args);
@@ -207,14 +205,11 @@ export function fn(impl) {
   return mockFn;
 }
 
-// Jest compatibility: isMockFunction
 export function isMockFunction(fn) {
   return typeof fn === 'function' && fn.mock && Array.isArray(fn.mock.calls);
 }
 
-// --- spyOn Implementation (Phase 2) ---
 export function spyOn(obj, methodName, accessorType) {
-  // Handle getter/setter spying
   if (accessorType === 'get' || accessorType === 'set') {
     const descriptor = Object.getOwnPropertyDescriptor(obj, methodName);
     if (!descriptor) {
@@ -271,14 +266,6 @@ export function spyOn(obj, methodName, accessorType) {
   return spy;
 }
 
-// --- Mock State Management (Phase 2) ---
-// Import worker-isolated registry management
-import { getMockRegistry, getGlobalMockRegistry, clearWorkerRegistries, forceClearAllRegistries } from './workerIsolatedRegistry.js';
-
-// Get worker-isolated registries
-const mockRegistry = getMockRegistry();
-const globalMockRegistry = getGlobalMockRegistry();
-
 export function mock(modulePath, mockImpl) {
   // Handle the case where no implementation is provided (undefined)
   // In this case, we should return an empty object as expected by tests
@@ -327,8 +314,6 @@ export function resetAllMocks() {
 }
 
 export function requireActual(modulePath) {
-  // For now, just return a mock object since we can't use require in ESM
-  // In a full implementation, this would bypass mocks and return the actual module
   return { [modulePath]: 'actual-module' };
 }
 
@@ -337,7 +322,6 @@ export function requireMock(modulePath) {
   return mock;
 }
 
-// --- Advanced Mock Features (Phase 2) ---
 export function mockImplementation(fn, implementation) {
   if (!fn || !fn.mock) {
     throw new Error('mockImplementation can only be called on mock functions');
@@ -374,7 +358,6 @@ export function mockRejectedValue(fn, value) {
   return fn;
 }
 
-// --- Module Mocking (Phase 2) ---
 function autoMockExports(exports) {
   for (const key in exports) {
     if (typeof exports[key] === 'function') {
@@ -385,35 +368,5 @@ function autoMockExports(exports) {
 }
 
 function findManualMock(modulePath) {
-  // Simple implementation - return null for now
   return null;
 }
-
-const builtins = builtinModules || [];
-
-// --- Fauji Spy Implementation ---
-export function createFaujiSpy(fn) {
-  const spy = function(...args) {
-    spy.calls.push(args);
-    spy.callCount++;
-    let result, threw = false, error;
-    try {
-      result = fn ? fn.apply(this, args) : undefined;
-    } catch (e) {
-      threw = true;
-      error = e;
-      throw e;
-    } finally {
-      spy.results.push({ type: threw ? 'throw' : 'return', value: threw ? error : result });
-    }
-    return result;
-  };
-  spy.calls = [];
-  spy.callCount = 0;
-  spy.results = [];
-  spy.isSpy = true;
-  spy.restore = () => {};
-  return spy;
-}
-
-export const faujiSpy = createFaujiSpy;

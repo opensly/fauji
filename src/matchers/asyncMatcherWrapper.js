@@ -1,6 +1,7 @@
-// Async Matcher Wrapper for enhanced test runner infrastructure
-// This module provides proper async matcher execution and result handling
-
+/**
+ * Async Matcher Wrapper for enhanced test runner infrastructure
+ * This module provides proper async matcher execution and result handling
+ */
 class AsyncMatcherResult {
   constructor(promise, matcherName, received, expected, isNot = false) {
     this.promise = promise;
@@ -18,7 +19,6 @@ class AsyncMatcherResult {
       this.result = await this.promise;
       this.resolved = true;
       
-      // If the result indicates a failure, throw the error
       if (this.result && this.result.success === false && this.result.error) {
         throw this.result.error;
       }
@@ -36,7 +36,6 @@ class AsyncMatcherResult {
   }
 
   shouldThrow() {
-    // Check if the result indicates a failure that should throw
     return this.resolved && this.result && this.result.success === false;
   }
 
@@ -52,11 +51,7 @@ class AsyncMatcherResult {
 export function createAsyncMatcherWrapper(matcherFn, matcherName) {
   return function(received, ...args) {
     const expected = args.length > 0 ? args[0] : undefined;
-    
-    // Execute the async matcher
     const promise = matcherFn(received, ...args);
-    
-    // Return an AsyncMatcherResult that can be handled by the test runner
     return new AsyncMatcherResult(promise, matcherName, received, expected);
   };
 }
@@ -65,4 +60,4 @@ export function isAsyncMatcherResult(obj) {
   return obj && obj.constructor === AsyncMatcherResult;
 }
 
-export { AsyncMatcherResult }; 
+export { AsyncMatcherResult };

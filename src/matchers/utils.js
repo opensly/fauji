@@ -1,4 +1,3 @@
-// Matcher utilities for Fauji
 import util from 'util';
 import deepEqualCheck from 'deep-equal-check';
 
@@ -37,7 +36,7 @@ export function isMatch(obj, partial) {
   return true;
 }
 
-function isArraySubset(arr, subset) {
+export function isArraySubset(arr, subset) {
   if (subset.length === 0) return true;
   if (arr.length < subset.length) return false;
   
@@ -159,14 +158,37 @@ export function getMatcherResult(result, matcherName, received, expected, isNot 
   return result;
 }
 
-export function isArray(val) { return Array.isArray(val); }
-export function isObject(val) { return val !== null && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date) && !(val instanceof RegExp); }
-export function isString(val) { return typeof val === 'string'; }
-export function isNumber(val) { return typeof val === 'number' && !isNaN(val); }
-export function isBoolean(val) { return typeof val === 'boolean'; }
-export function isFunction(val) { return typeof val === 'function'; }
-export function isDate(val) { return val instanceof Date; }
-export function isRegExp(val) { return val instanceof RegExp; }
+export function isArray(val) { 
+  return Array.isArray(val); 
+}
+
+export function isObject(val) { 
+  return val !== null && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date) && !(val instanceof RegExp); 
+}
+
+export function isString(val) { 
+  return typeof val === 'string'; 
+}
+
+export function isNumber(val) { 
+  return typeof val === 'number' && !isNaN(val); 
+}
+
+export function isBoolean(val) { 
+  return typeof val === 'boolean'; 
+}
+
+export function isFunction(val) { 
+  return typeof val === 'function'; 
+}
+
+export function isDate(val) { 
+  return val instanceof Date; 
+}
+
+export function isRegExp(val) { 
+  return val instanceof RegExp; 
+}
 
 export function isEmpty(val) {
   if (val == null) return true;
@@ -175,16 +197,20 @@ export function isEmpty(val) {
   if (typeof val === 'object') return Object.keys(val).length === 0;
   return false;
 }
+
 export function isValidJSON(val) {
   if (typeof val !== 'string') return false;
   try { JSON.parse(val); return true; } catch { return false; }
 }
+
 export function isValidURL(val) {
   try { new URL(val); return true; } catch { return false; }
 }
+
 export function isValidEmail(val) {
   return typeof val === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val);
 }
+
 export function isValidUUID(val) {
   return typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
 }

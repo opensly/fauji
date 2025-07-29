@@ -1,4 +1,3 @@
-// Test and suite registration for Fauji
 import { getCurrentSuite, setCurrentSuite, Suite } from './suite.js';
 
 /**
@@ -20,6 +19,7 @@ function describe(desc, optionsOrFn, maybeFn) {
   }
   return _describe(desc, fn, 'normal', options.annotations);
 }
+
 describe.only = (desc, optionsOrFn, maybeFn) => {
   let options = {}, fn;
   if (typeof optionsOrFn === 'function') {
@@ -30,6 +30,7 @@ describe.only = (desc, optionsOrFn, maybeFn) => {
   }
   return _describe(desc, fn, 'only', options.annotations);
 };
+
 describe.skip = (desc, optionsOrFn, maybeFn) => {
   let options = {}, fn;
   if (typeof optionsOrFn === 'function') {
@@ -60,6 +61,7 @@ function test(desc, optionsOrFn, maybeFn) {
   }
   return _test(desc, fn, 'normal', options);
 }
+
 test.only = (desc, optionsOrFn, maybeFn) => {
   let options = {}, fn;
   if (typeof optionsOrFn === 'function') {
@@ -70,6 +72,7 @@ test.only = (desc, optionsOrFn, maybeFn) => {
   }
   return _test(desc, fn, 'only', options);
 };
+
 test.skip = (desc, optionsOrFn, maybeFn) => {
   let options = {}, fn;
   if (typeof optionsOrFn === 'function') {

@@ -1,29 +1,29 @@
 import { getSpyMatcherResult } from './spyErrorReporting.js';
 
 /**
- * Separate handler for .not matcher logic
- * This provides clean separation between core matcher logic and negation handling
- */
-
-/**
- * Creates a .not handler for a matcher function
+ * Creates a .not handler for a matcher function that inverts the matcher's logic
+ * 
+ * Logic:
+ * - If the original matcher passes (returns true), .not should fail
+ * - If the original matcher fails (throws error), .not should pass
+ * - Uses specialized spy error reporting for proper .not case error messages
+ * 
  * @param {Function} matcherFn - The original matcher function
  * @param {string} matcherName - The name of the matcher
- * @returns {Function} - A function that handles .not logic
+ * @returns {Function} - A function that handles .not logic with inverted behavior
  */
 export function createNotHandler(matcherFn, matcherName) {
   return function(received, ...args) {
     try {
       const result = matcherFn(received, ...args);
-      // Matcher returned (passed), so .not should fail
-      // Use specialized spy error reporting for .not cases
+      // Original matcher passed, so .not should fail with specialized error reporting
       return getSpyMatcherResult(false, matcherName, received, args.length === 1 ? args[0] : args, true);
     } catch (matcherError) {
-      // Check if this is the error we just threw (for .not failure)
+      // Check if this error is already a .not failure to avoid double-negation
       if (matcherError.isNot) {
-        throw matcherError; // Re-throw .not failure errors
+        throw matcherError;
       }
-      // Matcher threw (failed), so .not passes
+      // Original matcher failed, so .not should pass
       return true;
     }
   };

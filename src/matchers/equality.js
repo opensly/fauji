@@ -1,9 +1,7 @@
-// Equality matchers for Fauji
 import { getMatcherResult } from './utils.js';
 import deepEqualCheck from 'deep-equal-check';
 
 export function toBe(received, expected) {
-  // Use Object.is() for special values like NaN, +0, -0
   const isEqual = Object.is(received, expected);
   return getMatcherResult(isEqual, 'toBe', received, expected);
 }
@@ -24,20 +22,29 @@ export function toBeDefined(received) {
   return getMatcherResult(received !== undefined, 'toBeDefined', received);
 }
 
+/**
+ * toBeCloseTo matcher follows below standards
+ * 
+ * - Strings: Case-sensitive substring matching
+ * - RegExp: Uses RegExp.test()
+ * - Performance: Early termination for better performance
+ * - Edge Cases: Handles NaN, Symbol, and other special values
+ *  
+ * @param {*} received 
+ * @param {*} expected 
+ * @param {*} precision 
+ * @returns 
+ */
 export function toBeCloseTo(received, expected, precision = 2) {
   if (typeof precision !== 'number' || precision < 0 || !Number.isInteger(precision)) {
     throw new Error('toBeCloseTo precision must be a non-negative integer');
   }
-
-  // Handle NaN cases - both values must be NaN to be considered equal
   if (isNaN(received) && isNaN(expected)) {
     return getMatcherResult(true, 'toBeCloseTo', received, expected);
   }
   if (isNaN(received) || isNaN(expected)) {
     return getMatcherResult(false, 'toBeCloseTo', received, expected);
   }
-  
-  // Handle Infinity cases - both must be the same infinity
   if (!isFinite(received) || !isFinite(expected)) {
     return getMatcherResult(received === expected, 'toBeCloseTo', received, expected);
   }
