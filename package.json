@@ -1,6 +1,6 @@
 {
   "name": "fauji",
-  "version": "0.0.85",
+  "version": "1.0.0",
   "description": "Lightweight testing framework for JavaScript/TypeScript",
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.mjs",
@@ -28,19 +28,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/opensly/fauji.git"
-  },
-  "keywords": [
-    "testing",
-    "framework",
-    "javascript",
-    "typescript",
-    "assertions"
-  ],
-  "author": "Lakshmikanth Vallampati <kanth.vallampati@gmail.com>",
-  "license": "MIT",
   "files": [
     "dist/",
     "README.md",
@@ -60,9 +47,20 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.1.4",
-    "esbuild": "^0.25.5",
     "rollup": "^4.45.1",
     "rollup-plugin-dts": "^6.2.1",
     "typescript": "^5.8.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opensly/fauji.git"
+  },
+  "keywords": [
+    "javascript",
+    "testing",
+    "framework",
+    "assertions"
+  ],
+  "author": "Lakshmikanth Vallampati <kanth.vallampati@gmail.com>",
+  "license": "MIT"
 }
